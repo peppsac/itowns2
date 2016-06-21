@@ -64,7 +64,7 @@ define('Scene/Quadtree', [
 
         var params = {layer : this,bbox: bbox };
 
-        this.interCommand.request(params, parent);
+        this.interCommand.request(params, parent, false);
 
     };
 
@@ -79,6 +79,7 @@ define('Scene/Quadtree', [
         }
 
         var quad = new Quad(node.bbox);
+
 
         return [quad.northWest, quad.northEast, quad.southWest, quad.southEast];
     };
