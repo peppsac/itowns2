@@ -18,13 +18,11 @@ define('Scene/Quadtree', [
 
 
     function Quadtree(type, schemeTile, size, link) {
-        Layer.call(this, type, size);
-
-        this.link = link;
         this.schemeTile = schemeTile;
         this.tileType = type;
         this.minLevel = 2;
         this.maxLevel = 17;
+
         var rootNode = new NodeMesh();
 
         rootNode.frustumCulled = false;
@@ -64,7 +62,7 @@ define('Scene/Quadtree', [
 
         var params = {layer : this,bbox: bbox };
 
-        this.interCommand.request(params, parent, false);
+        this.interCommand.request(params, parent, null);
 
     };
 

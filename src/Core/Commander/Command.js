@@ -18,7 +18,7 @@ define('Core/Commander/Command', [], function() {
         this.outBuffers = null;
         this.paramsFunction = {};
         this.processFunction = null;
-        this.cancellable = false;
+        this.earlyDropFunction = null;
         this.async = null;
         this.type = null;
         this.addInHistory = null;

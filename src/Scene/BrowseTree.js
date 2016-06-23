@@ -6,12 +6,10 @@
 
 define('Scene/BrowseTree', ['Globe/TileMesh', 'THREE'], function( TileMesh, THREE) {
 
-    function BrowseTree(engine) {
+    function BrowseTree() {
         //Constructor
 
         this.oneNode = 0;
-        this.gfxEngine = engine;
-        this.nodeProcess = undefined;
         this.tree = undefined;
         this.fogDistance = 1000000000.0;
         this.mfogDistance = 1000000000.0;
@@ -44,14 +42,6 @@ define('Scene/BrowseTree', ['Globe/TileMesh', 'THREE'], function( TileMesh, THRE
             };
 
     }
-
-    BrowseTree.prototype.addNodeProcess = function(nodeProcess) {
-        this.nodeProcess = nodeProcess;
-    };
-
-    BrowseTree.prototype.NodeProcess = function() {
-        return this.nodeProcess;
-    };
 
     BrowseTree.prototype.resetQuadtreeNode = function(node){
         this._resetQuadtreeNode(node);
@@ -88,7 +78,7 @@ define('Scene/BrowseTree', ['Globe/TileMesh', 'THREE'], function( TileMesh, THRE
 
     BrowseTree.prototype.uniformsProcess = function()
     {
-
+return; // TODO
         var positionWorld = new THREE.Vector3();
 
         return function(node, camera) {
@@ -237,11 +227,13 @@ define('Scene/BrowseTree', ['Globe/TileMesh', 'THREE'], function( TileMesh, THRE
         if(!layer.visible)
             return;
 
+          return; // TODO
         var root = layer.children[0];
 
         for (var c = 0; c < root.children.length; c++) {
             var node = root.children[c];
 
+            // FUCK
             this.cachedRTC = this.gfxEngine.getRTCMatrixFromNode(node, camera);
 
             var cRTC = function(obj) {
@@ -259,6 +251,7 @@ define('Scene/BrowseTree', ['Globe/TileMesh', 'THREE'], function( TileMesh, THRE
 
         if(!layer.visible)
             return;
+          return; // TODO
 
         var root = layer.children[0];
 

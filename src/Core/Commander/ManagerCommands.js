@@ -42,7 +42,7 @@ define('Core/Commander/ManagerCommands', [
 
             this.queueSync = null;
             this.loadQueue = [];
-            this.providerMap = {};
+            this.providers = [];
             this.history = null;
             this.eventsManager = new EventsManager();
 
@@ -59,15 +59,8 @@ define('Core/Commander/ManagerCommands', [
             this.queueAsync.queue(command);
         };
 
-        ManagerCommands.prototype.addLayer = function(layer, provider) {
-            this.providerMap[layer.id] = provider;
-        };
-
-        ManagerCommands.prototype.addMapProvider = function(map) {
-
-            var tileProvider = new TileProvider(map.size,map.gLDebug);
-            this.addLayer(map.tiles,tileProvider);
-
+        ManagerCommands.prototype.addProvider = function(provider) {
+            this.providers.push(provider);
         };
 
         ManagerCommands.prototype.getProvider = function(layer) {
@@ -124,15 +117,7 @@ define('Core/Commander/ManagerCommands', [
             while (this.queueAsync.length > 0) {
                 var cmd = this.queueAsync.peek();
                 var requester = cmd.requester;
-                if (requester.visible === false &&
-                    !cmd.cancellable &&
-                    requester.level >= 2) {
-                    while (requester.children.length > 0) {
-                        var child = requester.children[0];
-                        child.dispose();
-                        requester.remove(child);
-                    }
-
+                if (cmd.earlyDropFunction && cmd.earlyDropFunction(cmd)) {
                     this.queueAsync.dequeue();
                 } else {
                     return this.queueAsync.dequeue();

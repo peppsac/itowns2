@@ -40,9 +40,14 @@ and open the template in the editor.
 
                var viewerDiv = document.getElementById("viewerDiv");
 
-               itowns.viewer.createSceneGlobe(initCenter, viewerDiv) ;
-               //console.log(itowns.viewer.pickPosition());
+               var scene = itowns.viewer.createSceneGlobe(initCenter, viewerDiv) ;
 
+               // Register all providers
+               scene.managerCommand.addProvider(new WMTS_Provider({}));
+               scene.managerCommand.addProvider(new KML_Provider(undefined));
+
+               // Declare data sources.
+               // (nb: declaration ordering == rendering ordering)
               itowns.viewer.addImageryLayer({
                 protocol:   "wmts",
                 id:         "Ortho",

@@ -11,6 +11,7 @@ define('Core/Commander/Interfaces/ApiInterface/ApiGlobe', [
        'Scene/Layer',
        'Scene/NodeProcess',
        'Globe/Globe',
+       'Globe/WGS84GlobeView',
        'Core/Commander/Providers/WMTS_Provider',
        'Core/Geographic/CoordCarto',
        'Core/Geographic/Projection'], function(
@@ -69,6 +70,17 @@ define('Core/Commander/Interfaces/ApiInterface/ApiGlobe', [
 
     };
 
+    ApiGlobe.prototype.registerLayer = function(layer) {
+        var manager = this.scene.managerCommand;
+        var providers = manager.getProviders();
+
+        for (var provider in providers) {
+            if (provider.protocol === layer.protocol) {
+                provider.addLayer(layer);
+            }
+        }
+    }
+
     /**
     * Adds an imagery layer to the map. The layer id must be unique amongst all layers already inserted. The protocol rules which parameters are then needed for the function.
     * @constructor
@@ -76,6 +88,10 @@ define('Core/Commander/Interfaces/ApiInterface/ApiGlobe', [
     */
 
     ApiGlobe.prototype.addImageryLayer = function(layer) {
+        this.registerLayer(layer);
+        // FIXME: assumes views[0] == GlobeView
+        this.views[0].imageryLayer.push(layer);
+        return;
 
         var map = this.scene.getMap();
         var manager = this.scene.managerCommand;
@@ -94,6 +110,30 @@ define('Core/Commander/Interfaces/ApiInterface/ApiGlobe', [
         subLayer.description = {style:{layerTile:idLayerTile}};
 
         map.colorTerrain.add(subLayer);
+
+    };
+
+
+    /**
+    * Add an elevation layer to the map. Elevations layers are used to build the terrain, if there is some overlapped the best resolution is taken, if resolution is equals, the first one is used.
+    * The layer id must be unique amongst all layers already inserted. The protocol rules which parameters are then needed for the function
+    * @constructor
+    * @param {Layer} layer.
+    */
+
+    ApiGlobe.prototype.addElevationLayer = function(layer) {
+        this.registerLayer(layer);
+        // FIXME: assumes views[0] == GlobeView
+        this.views[0].elevationLayer.push(layer);
+        return;
+
+        var map = this.scene.getMap();
+        var manager = this.scene.managerCommand;
+        var providerWMTS = manager.getProvider(map.tiles).providerWMTS;
+
+        providerWMTS.addLayer(layer);
+        manager.addLayer(map.elevationTerrain,providerWMTS);
+        map.elevationTerrain.services.push(layer.id);
 
     };
 
@@ -139,24 +179,6 @@ define('Core/Commander/Interfaces/ApiInterface/ApiGlobe', [
         return layerWMTS[id].zoom.max;
     };
 
-    /**
-    * Add an elevation layer to the map. Elevations layers are used to build the terrain, if there is some overlapped the best resolution is taken, if resolution is equals, the first one is used.
-    * The layer id must be unique amongst all layers already inserted. The protocol rules which parameters are then needed for the function
-    * @constructor
-    * @param {Layer} layer.
-    */
-
-    ApiGlobe.prototype.addElevationLayer = function(layer) {
-
-        var map = this.scene.getMap();
-        var manager = this.scene.managerCommand;
-        var providerWMTS = manager.getProvider(map.tiles).providerWMTS;
-
-        providerWMTS.addLayer(layer);
-        manager.addLayer(map.elevationTerrain,providerWMTS);
-        map.elevationTerrain.services.push(layer.id);
-
-    };
 
     ApiGlobe.prototype.createSceneGlobe = function(coordCarto, viewerDiv) {
         // TODO: Normalement la creation de scene ne doit pas etre ici....
@@ -184,8 +206,10 @@ define('Core/Commander/Interfaces/ApiInterface/ApiGlobe', [
         this.scene = Scene(coordCarto,viewerDiv,debugMode,gLDebug);
 
         var map = new Globe(this.scene.size,gLDebug);
+        var globeView = new WGS84GlobeView();
 
         this.scene.add(map);
+        this.scene.views.push(globeView);
 
 
 
