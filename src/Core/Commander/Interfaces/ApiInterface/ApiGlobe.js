@@ -13,6 +13,7 @@ define('Core/Commander/Interfaces/ApiInterface/ApiGlobe', [
        'Globe/Globe',
        'Globe/WGS84GlobeView',
        'Core/Commander/Providers/WMTS_Provider',
+       'Core/Commander/Providers/KML_Provider',
        'Core/Geographic/CoordCarto',
        'Core/Geographic/Projection'], function(
            EventsManager,
@@ -20,7 +21,9 @@ define('Core/Commander/Interfaces/ApiInterface/ApiGlobe', [
            Layer,
            NodeProcess,
            Globe,
+           WGS84GlobeView,
            WMTS_Provider,
+           KML_Provider,
            CoordCarto,
            Projection) {
 
@@ -72,10 +75,11 @@ define('Core/Commander/Interfaces/ApiInterface/ApiGlobe', [
 
     ApiGlobe.prototype.registerLayer = function(layer) {
         var manager = this.scene.managerCommand;
-        var providers = manager.getProviders();
+        var providers = manager.providers;
 
-        for (var provider in providers) {
-            if (provider.protocol === layer.protocol) {
+        for (var i=0; i<providers.length; i++) {
+            var provider = providers[i];
+            if (provider.supports(layer.protocol)) {
                 provider.addLayer(layer);
             }
         }
@@ -90,7 +94,7 @@ define('Core/Commander/Interfaces/ApiInterface/ApiGlobe', [
     ApiGlobe.prototype.addImageryLayer = function(layer) {
         this.registerLayer(layer);
         // FIXME: assumes views[0] == GlobeView
-        this.views[0].imageryLayer.push(layer);
+        this.scene.views[0].imageryLayers.push(layer);
         return;
 
         var map = this.scene.getMap();
@@ -124,7 +128,7 @@ define('Core/Commander/Interfaces/ApiInterface/ApiGlobe', [
     ApiGlobe.prototype.addElevationLayer = function(layer) {
         this.registerLayer(layer);
         // FIXME: assumes views[0] == GlobeView
-        this.views[0].elevationLayer.push(layer);
+        this.scene.views[0].elevationLayers.push(layer);
         return;
 
         var map = this.scene.getMap();
@@ -206,10 +210,17 @@ define('Core/Commander/Interfaces/ApiInterface/ApiGlobe', [
         this.scene = Scene(coordCarto,viewerDiv,debugMode,gLDebug);
 
         var map = new Globe(this.scene.size,gLDebug);
-        var globeView = new WGS84GlobeView();
+        var globeView = new WGS84GlobeView(this.scene.currentCamera(), this.scene.size);
 
-        this.scene.add(map);
+        // this.scene.add(map);
         this.scene.views.push(globeView);
+        this.scene.scene3D().add(globeView.getRootNode());
+
+
+        // Register all providers
+        this.scene.managerCommand.addProvider(new WMTS_Provider({}));
+        // TODO this.scene.managerCommand.addProvider(new KML_Provider(undefined));
+
 
 
 

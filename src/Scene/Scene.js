@@ -16,7 +16,6 @@ define('Scene/Scene', [
     'Renderer/c3DEngine',
     'Globe/Globe',
     'Core/Commander/ManagerCommands',
-    'Core/Commander/Providers/TileProvider',
     'Core/Commander/Providers/PanoramicProvider',
     'Core/Math/Ellipsoid',
     'Renderer/PanoramicMesh',
@@ -35,7 +34,6 @@ define('Scene/Scene', [
         c3DEngine,
         Globe,
         ManagerCommands,
-        TileProvider,
         PanoramicProvider,
         Ellipsoid,
         PanoramicMesh,
@@ -117,7 +115,7 @@ define('Scene/Scene', [
     }
 
     Scene.prototype.updateCamera = function() {
-        for(var i = 0; i < this.layers.length; i++) {
+        for(var i = 0; i < this.views.length; i++) {
             this.views[i].updateCamera(this.gfxEngine.camera);
         }
     };
@@ -184,7 +182,7 @@ define('Scene/Scene', [
 
         // TODO: restore this. Use requestAnimationFrame and throttle update speed
         // window.clearInterval(this.timer);
-        // this.timer = window.setTimeout(this.quadTreeRequest.bind(this), waitTime,this.layers[0].node.tiles, this.layers[0].process);
+        this.timer = window.setTimeout(this.wait.bind(this), 50);
     };
 
     /**
@@ -207,7 +205,6 @@ define('Scene/Scene', [
         if(node instanceof GlobeView)
         {
             this.map = node;
-            this.managerCommand.addMapProvider(node);
         }
         this.views.push(view);
     };

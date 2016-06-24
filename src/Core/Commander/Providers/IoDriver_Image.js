@@ -20,27 +20,24 @@ define('Core/Commander/Providers/IoDriver_Image', ['Core/Commander/Providers/IoD
     IoDriver_Image.prototype.read = function(url) {
 
         // TODO new Promise is supported?
-        return  when.promise(function(resolve/*, reject*/)
+        return  when.promise(function(resolve, reject)
         //return new Promise(function(resolve/*, reject*/)
         {
 
             var image = new Image();
 
             image.addEventListener('load', function(/*event*/) {
-
                 resolve(this);
 
             }, false);
 
             image.addEventListener('progress', function(/*event*/) {
-
             }, false);
 
 
             image.addEventListener('error', function(/*event*/) {
-
                 this.src = '';
-                resolve(undefined);
+                reject(undefined);
 
             }.bind(this), false);
 

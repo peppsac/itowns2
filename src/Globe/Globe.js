@@ -43,8 +43,7 @@ define('Globe/Globe', [
 
         kml.visible = false;
 
-        this.tiles = new Quadtree(TileMesh, this.SchemeTileWMTS(2), this.size, kml);
-
+/*
         // PROBLEM is not generic : elevationTerrain ,colorTerrain
         this.elevationTerrain = new Layer();
         this.colorTerrain = new Layer();
@@ -54,7 +53,7 @@ define('Globe/Globe', [
 
         this.tiles.add(this.elevationTerrain);
         this.tiles.add(this.colorTerrain);
-
+*/
         this.atmosphere = this.NOIE ? new Atmosphere(this.size) : undefined;
         this.clouds = new Clouds();
 
@@ -97,7 +96,7 @@ define('Globe/Globe', [
         zUp.add(new THREE.AxisHelper( 10000000 ));
         zUp.add(batiment);
 
-        this.add(this.tiles);
+        // this.add(this.tiles);
         this.add(this.batiments);
         //this.add(this.layerWGS84Zup);
 
@@ -185,7 +184,7 @@ define('Globe/Globe', [
 
             };
 
-            this.tiles.children[0].traverse(cO);
+            //this.tiles.children[0].traverse(cO);
         }
 
     };
@@ -206,7 +205,7 @@ define('Globe/Globe', [
 
             };
 
-            this.tiles.children[0].traverse(cO);
+            //this.tiles.children[0].traverse(cO);
         }
 
     };

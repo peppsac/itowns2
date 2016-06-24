@@ -11,13 +11,15 @@
  * @returns {Quadtree_L13.Quadtree}
  */
 define('Scene/Quadtree', [
-    'Scene/Layer',
+    'Scene/Node',
     'Core/Geographic/Quad',
     'Renderer/NodeMesh'
-], function(Layer, Quad, NodeMesh) {
+], function(Node, Quad, NodeMesh) {
 
 
     function Quadtree(type, schemeTile, size, link) {
+        Node.call(this);
+
         this.schemeTile = schemeTile;
         this.tileType = type;
         this.minLevel = 2;
@@ -32,13 +34,9 @@ define('Scene/Quadtree', [
 
         rootNode.enablePickingRender = function() { return true;};
         this.add(rootNode);
-
-        for (var i = 0; i < this.schemeTile.rootCount(); i++) {
-            this.requestNewTile(this.schemeTile.getRoot(i), rootNode);
-        }
     }
 
-    Quadtree.prototype = Object.create(Layer.prototype);
+    Quadtree.prototype = Object.create(Node.prototype);
 
     Quadtree.prototype.constructor = Quadtree;
 
@@ -56,14 +54,6 @@ define('Scene/Quadtree', [
 
     Quadtree.prototype.southEast = function(node) {
         return node.children[3];
-    };
-
-    Quadtree.prototype.requestNewTile = function(bbox, parent) {
-
-        var params = {layer : this,bbox: bbox };
-
-        this.interCommand.request(params, parent, null);
-
     };
 
     /**

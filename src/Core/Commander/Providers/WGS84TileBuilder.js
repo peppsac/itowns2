@@ -15,13 +15,13 @@
 
 
 
-define('Core/Commander/Providers/TileProvider', [
+define('Core/Commander/Providers/WGS84TileBuilder', [ // FIXME: move
         'when',
         'THREE',
         'Core/Geographic/Projection',
-        'Core/Commander/Providers/WMTS_Provider',
-        'Core/Commander/Providers/KML_Provider',
+        'Globe/WGS84GlobeView',
         'Globe/TileGeometry',
+        'Globe/TileMesh',
         'Core/Geographic/CoordWMTS',
         'Core/Math/Ellipsoid',
         'Globe/BuilderEllipsoidTile',
@@ -32,9 +32,9 @@ define('Core/Commander/Providers/TileProvider', [
         when,
         THREE,
         Projection,
-        WMTS_Provider,
-        KML_Provider,
+        WGS84GlobeView,
         TileGeometry,
+        TileMesh,
         CoordWMTS,
         Ellipsoid,
         BuilderEllipsoidTile,
@@ -42,17 +42,11 @@ define('Core/Commander/Providers/TileProvider', [
         BoundingBox
     ) {
 
-        function TileProvider(size,gLDebug) {
+        function WGS84TileBuilder(size,gLDebug) {
             //Constructor
-
             this.projection = new Projection();
-            this.providerWMTS = new WMTS_Provider({support : gLDebug});
             this.ellipsoid = new Ellipsoid(size);
-            this.providerKML = new KML_Provider(this.ellipsoid);
             this.builder = new BuilderEllipsoidTile(this.ellipsoid,this.projection);
-
-            this.providerElevationTexture = this.providerWMTS;
-            this.providerColorTexture = this.providerWMTS;
 
             this.cacheGeometry = [];
             this.tree = null;
@@ -60,9 +54,9 @@ define('Core/Commander/Providers/TileProvider', [
 
         }
 
-        TileProvider.prototype.constructor = TileProvider;
+        WGS84TileBuilder.prototype.constructor = WGS84TileBuilder;
 
-        TileProvider.prototype.getGeometry = function(bbox, cooWMTS) {
+        WGS84TileBuilder.prototype.getGeometry = function(bbox, cooWMTS) {
             var geometry = undefined;
             var n = Math.pow(2, cooWMTS.zoom + 1);
             var part = Math.PI * 2.0 / n;
@@ -84,41 +78,17 @@ define('Core/Commander/Providers/TileProvider', [
             return geometry;
         };
 
-        // 52.0.2739.0 dev (64-bit)
-       // TileProvider.prototype.getKML= function(){
-        TileProvider.prototype.getKML= function(tile){
-
-            if(tile.link.layer.visible && tile.level  === 16)
-            {
-                var longitude   = tile.bbox.center.x / Math.PI * 180 - 180;
-                var latitude    = tile.bbox.center.y / Math.PI * 180;
-
-                return this.providerKML.loadKMZ(longitude, latitude).then(function (collada){
-
-                    if(collada && tile.link.children.indexOf(collada) === -1)
-                    {
-                            tile.link.add(collada);
-                            tile.content = collada;
-                    }
-
-                }.bind(this));
-            }
-        };
-
-        TileProvider.prototype.executeCommand = function(command) {
-
-            var bbox = command.paramsFunction.bbox;
+        WGS84TileBuilder.prototype.buildTile = function(parent, bbox, globe) {
 
             // TODO not generic
             var tileCoord = this.projection.WGS84toWMTS(bbox);
-            var parent = command.requester;
 
             // build tile
             var geometry = undefined; //getGeometry(bbox,tileCoord);
 
             var params = {bbox:bbox,zoom:tileCoord.zoom,segment:16,center:null,projected:null}
 
-            var tile = new command.type(params,this.builder);
+            var tile = new TileMesh(params,this.builder);
 
             tile.tileCoord = tileCoord;
             tile.material.setUuid(this.nNode++);
@@ -134,47 +104,23 @@ define('Core/Commander/Providers/TileProvider', [
             tile.position.copy(params.center);
             tile.setVisibility(false);
 
-            parent.add(tile);
             tile.updateMatrix();
             tile.updateMatrixWorld();
 
-            var map = command.paramsFunction.layer.parent;
-            var elevationServices = map.elevationTerrain.services;
-            var colorServices = map.colorTerrain.services;
-
             tile.WMTSs = [];
 
-            // TODO passer mes layers colors?
-            var paramsColor = [];
+            for (var i = 0; i < globe.imageryLayers.length; i++) {
+                // only use wmts providers
+                var tileMT = globe.imageryLayers[i].wmtsOptions.tileMatrixSet;
 
-            for (var i = 0; i < colorServices.length; i++)
-            {
-                var layer = map.colorTerrain.children[i];
-                var tileMT = this.providerColorTexture.layersWMTS[colorServices[i]].tileMatrixSet;
-
-                if(!tile.WMTSs[tileMT])
+                if(!tile.WMTSs[tileMT]) {
                     tile.WMTSs[tileMT] = this.projection.getCoordWMTS_WGS84(tile.tileCoord, tile.bbox,tileMT);
-
-                 paramsColor[i] = {visible:layer.visible ? 1 : 0,opacity:layer.opacity || 1.0};
+                }
             }
 
-            var requests = [
-
-                    this.providerElevationTexture.getElevationTexture(tile,elevationServices).then(function(terrain){
-
-                        this.setTextureElevation(terrain);}.bind(tile)),
-
-                    this.providerColorTexture.getColorTextures(tile,colorServices,paramsColor).then(function(colorTextures){
-
-                        this.setTexturesLayer(colorTextures,1);}.bind(tile))
-
-                    ,this.getKML(tile)
-
-                ];
-
-            return when.all(requests);
+            return tile;
         };
 
-        return TileProvider;
+        return WGS84TileBuilder;
 
     });

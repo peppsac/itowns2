@@ -60,7 +60,7 @@ varying vec3        vNormal;
 varying vec4        pos;
 
 
-//#define BORDERLINE
+#define BORDERLINE
 
 vec2    pitUV(vec2 uvIn, vec3 pit)
 {

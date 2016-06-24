@@ -14,14 +14,12 @@
 define('Core/Commander/ManagerCommands', [
         'Core/Commander/Interfaces/EventsManager',
         'Globe/Globe',
-        'Core/Commander/Providers/TileProvider',
         'PriorityQueue',
         'when'
     ],
     function(
         EventsManager,
         Globe,
-        TileProvider,
         PriorityQueue,
         when
     ) {
@@ -87,7 +85,7 @@ define('Core/Commander/ManagerCommands', [
                 .then(function() {
 
                 // if (this.commandsLength() <= 16)
-                     this.scene.wait(1);
+                     //this.scene.wait(1);
                 // else
                 //     this.scene.renderScene3D();
                 return this.runAllCommands();
@@ -103,8 +101,16 @@ define('Core/Commander/ManagerCommands', [
 
             while (this.queueAsync.length > 0 && arrayTasks.length < nT) {
                 var command = this.deQueue();
-                if(command)
-                    arrayTasks.push(this.providerMap[command.layer.id].executeCommand(command));
+                if(command) {
+                    var layer = command.layer;
+                    for (var i=0; i<this.providers.length; i++) {
+                        var provider = this.providers[i];
+
+                        if (provider.supports(layer.protocol)) {
+                            provider.executeCommand(command);
+                        }
+                    }
+                }
             }
 
             return arrayTasks;

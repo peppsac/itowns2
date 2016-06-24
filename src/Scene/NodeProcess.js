@@ -10,14 +10,17 @@ define('Scene/NodeProcess',
      'Core/Math/MathExtented',
      'Core/Commander/InterfaceCommander',
      'THREE',
-     'Core/defaultValue'
-], function(BoundingBox, Camera, MathExt, InterfaceCommander, THREE, defaultValue) {
+     'Core/defaultValue',
+     'when'
+], function(BoundingBox, Camera, MathExt, InterfaceCommander, THREE, defaultValue, when) {
 
 
-    function NodeProcess(camera, size, bbox) {
+    function NodeProcess(camera, size, globe, tileBuilder, bbox) {
         //Constructor
+        this.globe = globe;
         this.camera = new Camera();
         this.camera.camera3D = camera.camera3D.clone();
+        this.tileBuilder = tileBuilder;
 
         this.bbox = defaultValue(bbox, new BoundingBox(MathExt.PI_OV_TWO + MathExt.PI_OV_FOUR, MathExt.PI + MathExt.PI_OV_FOUR, 0, MathExt.PI_OV_TWO));
 
@@ -84,6 +87,68 @@ define('Scene/NodeProcess',
 
     };
 
+    NodeProcess.prototype.updateElevationTexture = function(node, elevationLayers) {
+        node.texturesNeeded =+ 1;
+
+        // FIXME
+        // Init elevation with parent's elevation if available
+        if (node.currentElevation === -1 && elevationLayers[0].zoom.min < node.level) {
+            node.setTextureElevation(-2);
+            return;
+        }
+
+        // We use 1 texture for elevation. Use the first available
+        for (var i=0; i<elevationLayers.length; i++) {
+            var layer = elevationLayers[i];
+
+            if (node.level > layer.zoom.max) {
+                continue;
+            }
+            // FIXME: layer might not cover the geographic area of tile
+            // request new texture
+            var args = {
+                destination: 0,
+                layer: layer
+            };
+            this.globe.interCommand.request(args, node).then(function(terrain) {
+                node.setTextureElevation(terrain);
+            });
+
+            break;
+        }
+    };
+
+
+    NodeProcess.prototype.updateImageryTexture = function(node, imageryLayers, params /* REMOVE */) {
+        // TODO: Request parent's texture if no texture at all
+        var lookAtAncestor = node.material.getLevelLayerColor(1) === -1;
+
+        var promises = [];
+        var paramMaterial = [];
+        for (var i = 0; i < imageryLayers.length; i++) {
+
+            var layer = imageryLayers[i];
+
+            if (layer.zoom.min <= node.level && node.level <= layer.zoom.max) {
+                var args = {
+                    destination: 1,
+                    layer: layer
+                };
+                var promise = this.globe.interCommand.request(args, node);
+                promises.push(promise);
+            }
+        }
+
+        // FIXME: we could assign individual texture as soon as the corresponding
+        // promise finished
+        if (promises.length > 0) {
+            when.all(promises).then(function(colorTextures) {
+                // colorTextures is an array of arrays of texture
+                node.setTexturesLayer(colorTextures, 1);
+            });
+        }
+    };
+
     /**
      * @documentation: Compute screen space error of node in function of camera
      * @param {type} node
@@ -99,30 +164,51 @@ define('Scene/NodeProcess',
         if (sse) {  // SSE too big: display or load children
             if (params.withUp) {
                 // request level up
-                if(!node.pendingSubdivision && node.noChild()) {
+                if(node.noChild()) {
                     bboxes = params.tree.subdivide(node);
                     node.pendingSubdivision = true;
 
                     for(i = 0; i < bboxes.length; i++) {
-                        args = {layer: params.tree, bbox: bboxes[i]};
-                        params.tree.interCommand.request(args, node);
+                        // Create child tile
+                        var childtile = this.tileBuilder.buildTile(
+                            node,
+                            bboxes[i],
+                            this.globe);
+                        // Add as child of node
+                        node.add(childtile);
+                        node.updateMatrix();
+                        node.updateMatrixWorld();
+
+
+                        this.updateElevationTexture(childtile, this.globe.elevationLayers);
+                        // TODO: Request parent's texture if no texture at all
+                        this.updateImageryTexture(childtile, this.globe.imageryLayers);
                     }
                 }
             }
             node.setDisplayed(
-                node.children.length === 0 ||
-                node.pendingSubdivision);
+                node.children.length === 0);
         } else {    // SSE good enough: display node and put it to the right scale if necessary
             if (params.withUp) {
+                // FIXME: how does this work with N color/elevation layers??
                 // find downscaled layer
                 var id = node.getDownScaledLayer();
 
-                if(id !== undefined) {
-                    // update downscaled layer to appropriate scale
-                    args = {layer : params.tree.children[id+1], subLayer : id};
-                    params.tree.interCommand.request(args, node);
+                // FIXME: TODO
+
+                // if(id !== undefined) {
+                //     // update downscaled layer to appropriate scale
+                //     args = {layer : params.tree.children[id+1], subLayer : id};
+                //     params.tree.interCommand.request(args, node);
+                // }
+
+                if (id === 0) {
+                    this.updateElevationTexture(node, this.globe.elevationLayers);
+                } else if (id === 1) {
+                    this.updateImageryTexture(node, this.globe.imageryLayers);
                 }
             }
+
 
             // display node and hide children
             for (i = 0; i < node.children.length; i++) {

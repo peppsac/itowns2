@@ -62,6 +62,10 @@ define('Core/Commander/Providers/WMTS_Provider', [
 
         WMTS_Provider.prototype.constructor = WMTS_Provider;
 
+        WMTS_Provider.prototype.supports = function(protocol) {
+            return protocol === 'wmts' ||
+                protocol === 'wmtsc';
+        }
 
         WMTS_Provider.prototype.customUrl = function(url,tilematrix,row,col)
         {
@@ -76,7 +80,7 @@ define('Core/Commander/Providers/WMTS_Provider', [
 
         WMTS_Provider.prototype.addLayer = function(layer)
         {
-
+            // FIXME: why is this even needed?
             if(layer.protocol === 'wmtsc')
             {
                  this.layersWMTS[layer.id] = {
@@ -143,28 +147,11 @@ define('Core/Commander/Providers/WMTS_Provider', [
          * @param {type} coWMTS : coord WMTS
          * @returns {WMTS_Provider_L15.WMTS_Provider.prototype@pro;_IoDriver@call;read@call;then}
          */
-        WMTS_Provider.prototype.getElevationTexture = function(tile,services) {
-
-
-            tile.texturesNeeded =+ 1;
-
-            var layerId = services[0];
-            var layer = this.layersWMTS[layerId];
-
-            if(tile.level > layer.zoom.max)
-            {
-                layerId = services[1];
-                layer = this.layersWMTS[layerId];
-            }
-
-            // TEMP
-            if (tile.currentElevation === -1 && tile.level  > layer.zoom.min )
-                return when(-2);
-
+        WMTS_Provider.prototype.getElevationTexture = function(tile, layer) {
             var coWMTS = tile.tileCoord;
 
 
-            var url = this.url(coWMTS,layerId);
+            var url = this.url(coWMTS,layer.id);
 
             var textureCache = this.cache.getRessource(url);
 
@@ -210,17 +197,9 @@ define('Core/Commander/Providers/WMTS_Provider', [
             }.bind(this));
         };
 
-        /**
-         * Return texture RGBA THREE.js of orthophoto
-         * TODO : RGBA --> RGB remove alpha canal
-         * @param {type} coWMTS
-         * @param {type} id
-         * @returns {WMTS_Provider_L15.WMTS_Provider.prototype@pro;ioDriverImage@call;read@call;then}
-         */
-        WMTS_Provider.prototype.getColorTexture = function(coWMTS, pitch,layerId) {
-
+        WMTS_Provider.prototype.getColorTexturePrivate = function(coWMTS, layer, pitch) {
             var result = {pitch:pitch};
-            var url = this.url(coWMTS,layerId);
+            var url = this.url(coWMTS, layer.id);
 
             result.texture = this.cache.getRessource(url);
 
@@ -250,52 +229,68 @@ define('Core/Commander/Providers/WMTS_Provider', [
 
                 return result;
 
-            }.bind(this)).catch(function(/*reason*/) {
-                    //console.error('getColorTexture failed for url |', url, '| Reason:' + reason);
+            }.bind(this)).catch(function(reason) {
+                    console.error('getColorTexture failed for url |', url, '| Reason:' + reason);
                     result.texture = null;
 
                     return result;
                 });
+        }
 
+        /**
+         * Return texture RGBA THREE.js of orthophoto
+         * TODO : RGBA --> RGB remove alpha canal
+         * @param {type} coWMTS
+         * @param {type} id
+         * @returns {WMTS_Provider_L15.WMTS_Provider.prototype@pro;ioDriverImage@call;read@call;then}
+         */
+        WMTS_Provider.prototype.getColorTexture = function(tile, layer) {
+            // Request parent's texture if no texture at all
+
+            var bcoord = tile.WMTSs[layer.wmtsOptions.tileMatrixSet];
+
+            var promises = [];
+            var paramMaterial = [];
+
+            // WARNING the direction textures is important
+            for (var row = bcoord[1].row; row >=  bcoord[0].row; row--) {
+               var cooWMTS = new CoordWMTS(bcoord[0].zoom, row, bcoord[0].col);
+               var pitch = new THREE.Vector3(0.0,0.0,1.0);
+
+               promises.push(this.getColorTexturePrivate(cooWMTS, layer, pitch));
+
+            }
+
+
+            if (promises.length) {
+                return when.all(promises);
+            } else {
+                return when();
+            }
         };
 
         WMTS_Provider.prototype.executeCommand = function(command){
-
-            //var service;
-            var destination = command.paramsFunction.layer.description.style.layerTile;
+            // FIXME: remove elevation/imagery specifics
+            // FIXME: remove destination
+            var destination = command.paramsFunction.destination;
             var tile = command.requester;
 
-            if(destination === 1)
-            {
-                return this.getColorTextures(tile,command.paramsFunction.layer.services).then(function(result)
-                {
-                    this.setTexturesLayer(result,destination);
-                }.bind(tile));
+            if(destination === 1) {
+                this.getColorTexture(tile, command.paramsFunction.layer).
+                    then(function(result) {
+                        command.resolve(result);
+                    }).else(function(result) {
+                        command.reject(result);
+                    });
             }
             else if (destination === 0)
             {
-
-                parent = tile.level === tile.levelElevation ? tile : tile.getParentLevel(tile.levelElevation);
-
-                if(parent.downScaledLayer(0))
-                {
-
-                    return this.getElevationTexture(parent,command.paramsFunction.layer.services).then(function(terrain)
-                    {
-                        this.setTextureElevation(terrain);
-
-                    }.bind(parent)).then(function()
-                    {
-                        if(this.downScaledLayer(0))
-
-                            this.setTextureElevation(-2);
-
-                    }.bind(tile));
-                }
-                else
-                {
-                    tile.setTextureElevation(-2);
-                }
+                this.getElevationTexture(tile,command.paramsFunction.layer).
+                    then(function(result) {
+                        command.resolve(result);
+                    }).else(function(result) {
+                        command.reject(result);
+                    });
             }
         };
 

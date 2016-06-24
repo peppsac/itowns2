@@ -4,7 +4,7 @@
  * Description: BrowseTree parcourt un arbre de Node. Lors du parcours un ou plusieur NodeProcess peut etre appliqué sur certains Node.
  */
 
-define('Scene/BrowseTree', ['Globe/TileMesh', 'THREE'], function( TileMesh, THREE) {
+define('Scene/BrowseTree', ['Globe/TileMesh', 'THREE', 'Renderer/c3DEngine'], function( TileMesh, THREE, gfxEngine) {
 
     function BrowseTree() {
         //Constructor
@@ -76,21 +76,14 @@ define('Scene/BrowseTree', ['Globe/TileMesh', 'THREE'], function( TileMesh, THRE
         return wasVisible || isVisible;
     };
 
-    BrowseTree.prototype.uniformsProcess = function()
+    BrowseTree.prototype.uniformsProcess = function(node, camera)
     {
-return; // TODO
         var positionWorld = new THREE.Vector3();
+        node.setMatrixRTC(gfxEngine().getRTCMatrixFromCenter(positionWorld.setFromMatrixPosition(node.matrixWorld), camera));
+        node.setFog(this.fogDistance);
 
-        return function(node, camera) {
-
-            node.setMatrixRTC(this.gfxEngine.getRTCMatrixFromCenter(positionWorld.setFromMatrixPosition(node.matrixWorld), camera));
-            node.setFog(this.fogDistance);
-
-            this.selectNode(node);
-
-        };
-
-    }();
+        this.selectNode(node);
+    };
 
     BrowseTree.prototype._selectNode = function(node)
     {
@@ -223,7 +216,7 @@ return; // TODO
     };
 
     BrowseTree.prototype.updateLayer = function(layer,camera) {
-
+/*
         if(!layer.visible)
             return;
 
@@ -233,8 +226,7 @@ return; // TODO
         for (var c = 0; c < root.children.length; c++) {
             var node = root.children[c];
 
-            // FUCK
-            this.cachedRTC = this.gfxEngine.getRTCMatrixFromNode(node, camera);
+            this.cachedRTC = GfxEngine.GetRTCMatrixFromNode(node, camera);
 
             var cRTC = function(obj) {
 
@@ -245,10 +237,11 @@ return; // TODO
 
             node.traverse(cRTC);
         }
+        */
     };
 
     BrowseTree.prototype.updateMobileMappingLayer = function(layer,camera) {
-
+/*
         if(!layer.visible)
             return;
           return; // TODO
@@ -258,9 +251,10 @@ return; // TODO
         for (var c = 0; c < root.children.length; c++) {
 
             var node = root.children[c];
-            node.setMatrixRTC(this.gfxEngine.getRTCMatrixFromCenter(node.absoluteCenter, camera));
+            node.setMatrixRTC(this.GfxEngine.GetRTCMatrixFromCenter(node.absoluteCenter, camera));
 
         }
+        */
     };
 
     return BrowseTree;

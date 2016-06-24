@@ -195,26 +195,32 @@ define('Globe/TileMesh', [
         if (elevation === -1) { // No texture
             this.currentElevation = -2;
         } else if (elevation === -2) {// get ancestor texture
-            var levelAncestor = this.getParentNotDownScaled(l_ELEVATION).currentElevation;
-            var ancestor = this.getParentLevel(levelAncestor);
-            var minMax = new THREE.Vector2();
+            var parent = this.getParentNotDownScaled(l_ELEVATION);
+            if (parent) {
+
+                var levelAncestor = parent.currentElevation;
+                var ancestor = this.getParentLevel(levelAncestor);
+                var minMax = new THREE.Vector2();
 
 
-            if (ancestor) { // TODO WHY -> because levelAncestor === -2
-                pitScale = ancestor.bbox.pitScale(this.bbox);
-                texture = ancestor.material.Textures[l_ELEVATION][0];
-                var image = texture.image;
+                if (ancestor) { // TODO WHY -> because levelAncestor === -2
+                    pitScale = ancestor.bbox.pitScale(this.bbox);
+                    texture = ancestor.material.Textures[l_ELEVATION][0];
+                    var image = texture.image;
 
-                minMax.y = ancestor.bbox.maxCarto.altitude;
-                minMax.x = ancestor.bbox.minCarto.altitude;
+                    minMax.y = ancestor.bbox.maxCarto.altitude;
+                    minMax.x = ancestor.bbox.minCarto.altitude;
 
-                this.parseBufferElevation(image, minMax, pitScale);
+                    this.parseBufferElevation(image, minMax, pitScale);
 
-                if (minMax.x !== 0 && minMax.y !== 0) {
-                    this.setBBoxZ(minMax.x, minMax.y);
+                    if (minMax.x !== 0 && minMax.y !== 0) {
+                        this.setBBoxZ(minMax.x, minMax.y);
+                    }
+
+                    this.currentElevation = ancestor.currentElevation;
+                } else {
+                    this.currentElevation = -2;
                 }
-
-                this.currentElevation = ancestor.currentElevation;
             } else {
                 this.currentElevation = -2;
             }

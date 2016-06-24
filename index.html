@@ -42,16 +42,13 @@ and open the template in the editor.
 
                var scene = itowns.viewer.createSceneGlobe(initCenter, viewerDiv) ;
 
-               // Register all providers
-               scene.managerCommand.addProvider(new WMTS_Provider({}));
-               scene.managerCommand.addProvider(new KML_Provider(undefined));
-
                // Declare data sources.
                // (nb: declaration ordering == rendering ordering)
               itowns.viewer.addImageryLayer({
                 protocol:   "wmts",
                 id:         "Ortho",
                 url:        "http://wxs.ign.fr/va5orxd0pgzvq3jxutqfuy0b/geoportail/wmts",
+                zoom: {min: 2, max: 20},
                 wmtsOptions: {
                         //name:'GEOGRAPHICALGRIDSYSTEMS.MAPS',
                         name: "ORTHOIMAGERY.ORTHOPHOTOS",
@@ -193,6 +190,7 @@ and open the template in the editor.
                 id:         "OrthoCRS",
                 url:        "http://wxs.ign.fr/va5orxd0pgzvq3jxutqfuy0b/geoportail/wmts",
                 fx :        1.0,
+                zoom: {min: 6, max: 17},
                 wmtsOptions: {
                         name: 'ORTHOIMAGERY.ORTHOPHOTOS.CRS84',
                         mimetype: "image/jpeg",
@@ -280,6 +278,7 @@ and open the template in the editor.
                 id:         "ScanEX",
                 url:        "http://wxs.ign.fr/va5orxd0pgzvq3jxutqfuy0b/geoportail/wmts",
                 fx :        2.5,
+                zoom: {min: 6, max: 18},
                 wmtsOptions: {
                         //name:'GEOGRAPHICALGRIDSYSTEMS.MAPS',
                         // name: 'GEOGRAPHICALGRIDSYSTEMS.MAPS.SCAN-EXPRESS.ROUTIER',
@@ -387,6 +386,7 @@ and open the template in the editor.
             id:         "IGN_MNT",
             url:        "http://wxs.ign.fr/va5orxd0pgzvq3jxutqfuy0b/geoportail/wmts",
             noDataValue : -99999,
+            zoom: {min: 3, max: 11},
             wmtsOptions: {
                     name: "ELEVATION.ELEVATIONGRIDCOVERAGE",
                     mimetype: "image/x-bil;bits=32",
@@ -461,6 +461,7 @@ and open the template in the editor.
             id:         "IGN_MNT_HIGHRES",
             url:        "http://wxs.ign.fr/va5orxd0pgzvq3jxutqfuy0b/geoportail/wmts",
             noDataValue : -99999,
+            zoom: {min: 6, max: 14},
             wmtsOptions: {
                     name: "ELEVATION.ELEVATIONGRIDCOVERAGE.HIGHRES",
                     mimetype: "image/x-bil;bits=32",
@@ -524,6 +525,7 @@ and open the template in the editor.
                 }
             });
 
+        itowns.viewer.scene.views[0].init();
         itowns.viewer.update();
 
 
@@ -546,6 +548,7 @@ and open the template in the editor.
                gui.domElement.id = 'menuDiv';
                viewerDiv.appendChild(gui.domElement);
 
+               /*
                 var layers = itowns.viewer.getLayers();
                 for(var id in layers)
                 {
@@ -626,7 +629,7 @@ and open the template in the editor.
                     //itowns.viewer.setCenter({longitude:-74,latitude:40,altitude:0});
                     //console.log(itowns.viewer.getMaxZoomLevel("Ortho"));
                 } ,
-                false);
+                false);*/
 
         </script>
     </body>

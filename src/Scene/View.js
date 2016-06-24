@@ -25,7 +25,7 @@ define('Scene/View', [
 
     function View() {
         this.id = View.count++;
-        this.interCommand = new InterfaceCommander(id);
+        this.interCommand = new InterfaceCommander(this.id);
     }
 
 
