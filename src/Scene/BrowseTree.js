@@ -79,7 +79,8 @@ define('Scene/BrowseTree', ['Globe/TileMesh', 'THREE', 'Renderer/c3DEngine'], fu
     BrowseTree.prototype.uniformsProcess = function(node, camera)
     {
         var positionWorld = new THREE.Vector3();
-        node.setMatrixRTC(gfxEngine().getRTCMatrixFromCenter(positionWorld.setFromMatrixPosition(node.matrixWorld), camera));
+        var engine = gfxEngine();
+        node.setMatrixRTC(engine.getRTCMatrixFromCenter(positionWorld.setFromMatrixPosition(node.matrixWorld), camera));
         node.setFog(this.fogDistance);
 
         this.selectNode(node);
@@ -251,7 +252,7 @@ define('Scene/BrowseTree', ['Globe/TileMesh', 'THREE', 'Renderer/c3DEngine'], fu
         for (var c = 0; c < root.children.length; c++) {
 
             var node = root.children[c];
-            node.setMatrixRTC(this.GfxEngine.GetRTCMatrixFromCenter(node.absoluteCenter, camera));
+            node.setMatrixRTC(this.gfxEngine().getRTCMatrixFromCenter(node.absoluteCenter, camera));
 
         }
         */

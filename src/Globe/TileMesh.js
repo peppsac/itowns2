@@ -231,7 +231,10 @@ define('Globe/TileMesh', [
             this.currentElevation = elevation.level;
         }
 
-        this.material.setTexture(texture, l_ELEVATION, 0, pitScale);
+        if (texture != undefined) {
+            this.material.setTexture(texture, l_ELEVATION, 0, pitScale);
+
+        }
 
         this.loadingCheck();
     };

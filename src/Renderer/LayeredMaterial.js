@@ -152,9 +152,14 @@ define('Renderer/LayeredMaterial', ['THREE',
     };
 
     LayeredMaterial.prototype.setTexture = function(texture, layer, slot, pitScale) {
+        if (texture === undefined ||texture.image === undefined) {
+            console.error('Invalid texture');
+            return;
+        }
 
-        if(this.Textures[layer][slot] === undefined || this.Textures[layer][slot].image === undefined)
+        if(this.Textures[layer][slot] === undefined || this.Textures[layer][slot].image === undefined) {
             this.nbTextures[layer] += 1 ;
+        }
 
         // BEWARE: array [] -> size: 0; array [10]="wao" -> size: 11
         this.Textures[layer][slot] = texture ? texture : emptyTexture;
@@ -194,9 +199,10 @@ define('Renderer/LayeredMaterial', ['THREE',
     LayeredMaterial.prototype.setTexturesLayer = function(textures, layer){
 
         for (var i = 0, max = textures.length; i < max; i++) {
-
-            if(textures[i])
-                this.setTexture(textures[i].texture,layer,i,textures[i].pitch);
+            var tex = textures[i];
+            if(tex) {
+                this.setTexture(tex.texture, layer, i, tex.pitch);
+            }
 
         }
     };

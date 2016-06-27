@@ -611,9 +611,7 @@ define('Renderer/c3DEngine', [
         dummy.updateMatrixWorld();
     };
 
-    // TODO SHOULDD BE STATIC
-    c3DEngine.prototype.getRTCMatrixFromCenter = function(center, camera ) {
-
+    c3DEngine.prototype.getRTCMatrixFromCenter = function(center, camera) {
         var position    = new THREE.Vector3().subVectors(camera.camera3D.position,center);
         var quaternion  = new THREE.Quaternion().copy(camera.camera3D.quaternion);
         var matrix      = new THREE.Matrix4().compose(position,quaternion,new THREE.Vector3(1,1,1));
@@ -623,9 +621,7 @@ define('Renderer/c3DEngine', [
         return            new THREE.Matrix4().multiplyMatrices(camera.camera3D.projectionMatrix,mvc);
     };
 
-    // TODO SHOULDD BE STATIC
     c3DEngine.prototype.getRTCMatrixFromNode = function(node, camera) {
-
         var camera3D = camera.camera3D;
         //var position = new THREE.Vector3().subVectors(camera3D.position, node.position);
         var positionWorld = new THREE.Vector3().setFromMatrixPosition(node.matrixWorld);

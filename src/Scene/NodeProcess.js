@@ -130,6 +130,16 @@ define('Scene/NodeProcess',
             var layer = imageryLayers[i];
 
             if (layer.zoom.min <= node.level && node.level <= layer.zoom.max) {
+
+                paramMaterial.push(
+                    {tileMT: layer.wmtsOptions.tileMatrixSet,
+                        pit: promises.length,
+                        visible: 1 /*params[i].visible */,
+                        opacity: 1 /*params[i].opacity */,
+                        fx: layer.fx
+                    });
+
+
                 var args = {
                     destination: 1,
                     layer: layer
@@ -143,8 +153,14 @@ define('Scene/NodeProcess',
         // promise finished
         if (promises.length > 0) {
             when.all(promises).then(function(colorTextures) {
+                node.setParamsColor(promises.length, paramMaterial);
+
                 // colorTextures is an array of arrays of texture
-                node.setTexturesLayer(colorTextures, 1);
+                var concat = [];
+                for (var i=0; i<colorTextures.length; i++) {
+                    concat = concat.concat(colorTextures[i]);
+                }
+                node.setTexturesLayer(concat, 1);
             });
         }
     };
