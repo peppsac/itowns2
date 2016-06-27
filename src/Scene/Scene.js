@@ -180,6 +180,7 @@ define('Scene/Scene', [
 
         this.renderScene3D();
 
+        window.clearInterval(this.timer);
         // TODO: restore this. Use requestAnimationFrame and throttle update speed
         // window.clearInterval(this.timer);
         this.timer = window.setTimeout(this.wait.bind(this), 50);
