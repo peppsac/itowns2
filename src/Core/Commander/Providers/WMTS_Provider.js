@@ -245,9 +245,7 @@ WMTS_Provider.prototype.executeCommand = function(command) {
 
     var func = supportedFormats[layer.options.mimetype];
     if (func) {
-        return func(tile, layer, command.paramsFunction).then(function(result) {
-            return command.resolve(result);
-        });
+        return func(tile, layer, command.paramsFunction);
     } else {
         return Promise.reject(new Error('Unsupported mimetype ' + layer.options.mimetype));
     }
