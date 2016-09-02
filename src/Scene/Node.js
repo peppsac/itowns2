@@ -21,7 +21,7 @@ function Node() {
     this.screenSpaceError = 0.0;
     this.loaded = false;
     this.pendingSubdivision = false;
-    this.pendingLayers = {};
+    this.layerUpdateState = {};
     this.visible = true;
     this.layer = null;
 
