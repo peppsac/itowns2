@@ -369,12 +369,20 @@ LayeredMaterial.prototype.isColorLayerDownscaled = function isColorLayerDownscal
 
 LayeredMaterial.prototype.isLayerTypeDownscaled = function isLayerTypeDownscaled(layerType, level) {
     if (layerType === l_ELEVATION) {
-        if (this.textures[l_ELEVATION][0].level < 0) {
-            return false;
-        } else {
-            return this.textures[l_ELEVATION][0].level < level;
+        const tex = this.textures[l_ELEVATION][0];
+        // 3 possible cases
+        //   - initialization (no texture)
+        if (tex === undefined) {
+            return true;
         }
+        //   - blank texture (eg: empty xbil texture)
+        if (tex.level === -1) {
+            return false;
+        }
+        //   - regular texture
+        return tex.level < this.level;
     } else if (layerType === l_COLOR) {
+        // browse each layer
         for (let index = 0, max = this.colorLayersId.length; index < max; index++) {
             const offset = this.getTextureOffsetByLayerIndex(index);
             if (this.textures[l_COLOR][offset].level < level) {
@@ -393,9 +401,9 @@ LayeredMaterial.prototype.getColorLayerLevelById = function getColorLayerLevelBy
         index = 0;
     }
     const slot = this.getTextureOffsetByLayerIndex(index);
-    const level = this.textures[l_COLOR][slot].level;
+    const tex = this.textures[l_COLOR][slot];
 
-    return level;
+    return tex ? tex.level : -1;
 };
 
 LayeredMaterial.prototype.getElevationLayerLevel = function getElevationLayerLevel() {
