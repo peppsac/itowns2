@@ -178,7 +178,13 @@ ManagerCommands.prototype.getProviders = function() {
     return p;
 };
 
+function CancelledCommandException(command) {
+    this.command = command;
+}
 
+CancelledCommandException.prototype.toString = function() {
+    return 'Cancelled command ' + this.command + ' for node ' + this.command.requester;
+}
 
 /**
  */
@@ -189,7 +195,7 @@ ManagerCommands.prototype.deQueue = function(queue) {
 
         if (cmd.earlyDropFunction && cmd.earlyDropFunction(cmd)) {
             queue.counters.cancelled++;
-            cmd.reject(new Error('command canceled ' + cmd.requester.id + '/' + cmd.layer.id));
+            cmd.reject(new CancelledCommandException(cmd));
         } else {
             return cmd;
         }
@@ -205,6 +211,7 @@ ManagerCommands.prototype.wait = function() {
     this.eventsManager.wait();
 };
 
+export { CancelledCommandException };
 
 export default function(scene) {
     instanceCommandManager = instanceCommandManager || new ManagerCommands(scene);
