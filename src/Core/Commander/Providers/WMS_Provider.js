@@ -131,10 +131,7 @@ WMS_Provider.prototype.getColorTexture = function(tile, layer, bbox, pitch) {
 
         return result;
 
-    }.bind(this)).catch(function(/*reason*/) {
-        result.texture = null;
-        return result;
-    });
+    }.bind(this));
 
 };
 
@@ -145,12 +142,12 @@ WMS_Provider.prototype.getXbilTexture = function(tile, layer, bbox, pitch) {
     var textureCache = this.cache.getRessource(url);
 
     if (textureCache !== undefined) {
-        return Promise.resolve(textureCache ? {
+        return Promise.resolve({
             pitch,
             texture: textureCache.texture,
             min: textureCache.min,
             max: textureCache.max
-        } : null);
+        });
     }
 
 
@@ -163,24 +160,18 @@ WMS_Provider.prototype.getXbilTexture = function(tile, layer, bbox, pitch) {
     // }
     // -> bug #74
 
-    return this._IoDriver.read(url).then(function(result) {
-        if (result !== undefined) {
-            result.texture = this.getTextureFloat(result.floatArray);
-            result.texture.generateMipmaps = false;
-            result.texture.magFilter = THREE.LinearFilter;
-            result.texture.minFilter = THREE.LinearFilter;
-            result.pitch = pitch;
+return this._IoDriver.read(url).then(function(result) {
+        result.texture = this.getTextureFloat(result.floatArray);
+        result.texture.generateMipmaps = false;
+        result.texture.magFilter = THREE.LinearFilter;
+        result.texture.minFilter = THREE.LinearFilter;
+        result.pitch = pitch;
 
-            // In RGBA elevation texture LinearFilter give some errors with nodata value.
-            // need to rewrite sample function in shader
-            this.cache.addRessource(url, result);
+        // In RGBA elevation texture LinearFilter give some errors with nodata value.
+        // need to rewrite sample function in shader
+        this.cache.addRessource(url, result);
 
-            return result;
-        } else {
-            var texture = null;
-            this.cache.addRessource(url, texture);
-            return texture;
-        }
+        return result;
     }.bind(this));
 };
 
