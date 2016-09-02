@@ -157,22 +157,13 @@ WMTS_Provider.prototype.getXbilTexture = function(tile, layer, parameters) {
     // -> bug #74
 
     return this._IoDriver.read(url).then(result => {
-        // If xbil buffer is empty then result will be null.
-        // This is not an error!
-        if (result !== null) {
-            result.pitch = pitch;
-            result.texture = this.getTextureFloat(result.floatArray);
-            result.texture.generateMipmaps = false;
-            result.texture.magFilter = THREE.LinearFilter;
-            result.texture.minFilter = THREE.LinearFilter;
+        result.pitch = pitch;
+        result.texture = this.getTextureFloat(result.floatArray);
+        result.texture.generateMipmaps = false;
+        result.texture.magFilter = THREE.LinearFilter;
+        result.texture.minFilter = THREE.LinearFilter;
 
-            // In RGBA elevation texture LinearFilter give some errors with nodata value.
-            // need to rewrite sample function in shader
-            //result.texture.magFilter = THREE.NearestFilter;
-            //result.texture.minFilter = THREE.NearestFilter;
-
-            this.cache.addRessource(url, { texture: result.texture, floatArray: result.floatArray });
-        }
+        this.cache.addRessource(url, { texture: result.texture, floatArray: result.floatArray });
 
         return result;
     });

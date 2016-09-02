@@ -80,7 +80,7 @@ var LayeredMaterial = function(id) {
         this.nbTextures[l] = 0;
     }
 
-    this.Textures[0] = [emptyTexture];
+    this.Textures[0] = [undefined];
     this.Textures[1] = Array(nbSamplers);
     this.paramLayers = Array(8);
     this.paramBLayers = Array(8);
@@ -320,9 +320,9 @@ LayeredMaterial.prototype.setNbLayersColor = function(n) {
 
 
 LayeredMaterial.prototype.getLayerLevel = function(id, slot) {
-    var level = this.Textures[id][slot || 0].level;
+    var tex = this.Textures[id][slot || 0];
 
-    return level;
+    return tex ? tex.level : 0;
 };
 
 export default LayeredMaterial;

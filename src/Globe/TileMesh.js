@@ -192,15 +192,10 @@ TileMesh.prototype.setTextureElevation = function(elevation) {
         return;
     }
 
-    var texture, pitScale;
+    let pitScale = elevation.pitch || new THREE.Vector3(0, 0, 1);
+    this.setBBoxZ(elevation.min, elevation.max);
 
-    if (elevation) {
-        texture = elevation.texture;
-        pitScale = elevation.pitch || new THREE.Vector3(0, 0, 1);
-        this.setBBoxZ(elevation.min, elevation.max);
-    }
-
-    this.materials[RendererConstant.FINAL].setTexture(texture, l_ELEVATION, 0, pitScale);
+    this.materials[RendererConstant.FINAL].setTexture(elevation.texture, l_ELEVATION, 0, pitScale);
     this.materials[RendererConstant.DEPTH].uniforms.nbTextures.value = this.materials[RendererConstant.FINAL].nbTextures[0];
     this.materials[RendererConstant.ID].uniforms.nbTextures.value = this.materials[RendererConstant.FINAL].nbTextures[0];
 
@@ -255,17 +250,23 @@ TileMesh.prototype.downScaledColorLayer = function(layer) {
 }
 
 
-TileMesh.prototype.downScaledLayer = function(id) {
+TileMesh.prototype.isLayerTypeImprovable = function(type) {
     var mat = this.materials[RendererConstant.FINAL];
 
-    if (id === l_ELEVATION) {
-        if (mat.Textures[l_ELEVATION][0].level < 0) {
-            return false;
-        } else {
-            return mat.Textures[l_ELEVATION][0].level <
-                this.level;
+    if (type === l_ELEVATION) {
+        let tex = mat.Textures[l_ELEVATION][0];
+        // 3 possible cases
+        //   - initialization (no texture)
+        if (tex === undefined) {
+            return true;
         }
-    } else if (id === l_COLOR) {
+        //   - blank texture (eg: empty xbil texture)
+        if (tex.level === -1) {
+            return false;
+        }
+        //   - regular texture
+        return tex.level < this.level;
+    } else if (type === l_COLOR) {
         // browse each layer
         var nb = mat.nbTextures[1];
         for (var slot=0; slot<nb; slot++) {
@@ -276,15 +277,6 @@ TileMesh.prototype.downScaledLayer = function(id) {
     }
 
     return false;
-};
-
-TileMesh.prototype.getDownScaledLayer = function() {
-    if (this.downScaledLayer(l_COLOR))
-        return l_COLOR;
-    else if (this.downScaledLayer(l_ELEVATION))
-        return l_ELEVATION;
-    else
-        return undefined;
 };
 
 TileMesh.prototype.normals = function() {
