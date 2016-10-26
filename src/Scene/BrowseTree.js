@@ -86,6 +86,10 @@ BrowseTree.prototype.browse = function(tree, camera, process, layersConfig) {
         layersConfig: layersConfig
     };
 
+    if (__DEV__) {
+        this.tree.resetStatistics();
+    }
+
     var rootNode = tree.children[0];
     applyFunctionToChildren(n => this._browseDisplayableNode(n, camera, process, params), rootNode);
 };
@@ -112,6 +116,13 @@ BrowseTree.prototype._browseDisplayableNode = function(node, camera, process, pa
 
         applyFunctionToChildren(n => this._browseNonDisplayableNode(n, node.level + 2, process, camera, params), node);
     }
+
+    if (__DEV__) {
+        params.tree.updateStatistics('displayed', node.level, node.isDisplayed());
+        params.tree.updateStatistics('visible', node.level, node.isVisible());
+        params.tree.updateStatistics('culled', node.level, !node.isVisible());
+        params.tree.updateStatistics('pending-sub', node.level, node.pendingSubdivision);
+    }
 };
 
 BrowseTree.prototype._browseNonDisplayableNode = function(node, level, process, camera, params) {
@@ -137,6 +148,9 @@ BrowseTree.prototype._browseNonDisplayableNode = function(node, level, process, 
 
         // sse means we need to subdivide -> don't try to clean
         if (disposableChildrenCount === node.children.length && !sse) {
+            if (__DEV__) {
+                params.tree.updateStatistics('disposed', node.level + 1, 4);
+            }
             // remove children and update visibility
             node.disposeChildren();
             node.setDisplayed(!node.parent.isDisplayed() && node.isVisible());

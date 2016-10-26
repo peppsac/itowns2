@@ -80,6 +80,10 @@ NodeProcess.prototype.subdivideNode = function(node, camera, params) {
         var bboxes = params.tree.subdivideNode(node);
         node.pendingSubdivision = true;
 
+        if (__DEV__) {
+            node.materials[0].uniforms.borderColor.value = [1.0, 0.0, 0.0];
+        }
+
         for (var i = 0; i < bboxes.length; i++) {
             var args = {
                 layer: params.layersConfig.getGeometryLayers()[0],
@@ -143,7 +147,7 @@ NodeProcess.prototype.subdivideNode = function(node, camera, params) {
                 this.refineNodeLayers(child, camera, params);
 
                 return 0;
-            }.bind(this));
+            }.bind(this), function(err) { console.error("oops " + err); });
         }
     }
 };
@@ -276,6 +280,11 @@ function updateNodeImagery(quadtree, node, layersConfig, force) {
         promises.push(quadtree.interCommand.request(args, node, refinementCommandCancellationFn).then(
             function(result) {
                 let level = args.ancestor ? args.ancestor.level : node.level;
+
+                if (__DEV__) {
+                    if (!node.colorLevels[layer.id]) node.colorLevels[layer.id] = []
+                    node.colorLevels[layer.id].push(level);
+                }
 
                 // Assign .level to texture
                 if (Array.isArray(result)) {
@@ -412,7 +421,9 @@ function updateNodeElevation(quadtree, node, layersConfig, force) {
                 }
 
                 node.setTextureElevation(terrain);
-
+                if (__DEV__) {
+                    node.elevationLevels.push((ancestor || node).level);
+                }
 
                 return node;
             },

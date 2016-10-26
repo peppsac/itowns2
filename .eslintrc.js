@@ -17,5 +17,8 @@ module.exports = {
     // Stylistic rules
     "eol-last": "error",
     "no-trailing-spaces": "error",
+  },
+  "globals": {
+    "__DEV__": true
   }
 }

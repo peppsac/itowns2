@@ -59,11 +59,46 @@ function Quadtree(type, schemeTile, link) {
     };
 
     this.add(rootNode);
+
+    if (__DEV__) {
+        this.resetStatistics();
+    }
 }
 
 Quadtree.prototype = Object.create(Layer.prototype);
 
 Quadtree.prototype.constructor = Quadtree;
+
+Quadtree.prototype.resetStatistics = function() {
+    this.statistics = [];
+    this.statistics.titles = new Set();
+    for (var i=0; i<=this.maxLevel; i++) {
+        this.statistics.push({});
+    }
+}
+
+if (__DEV__) {
+
+Quadtree.prototype.updateStatistics = function(name, level, delta) {
+    this.statistics.titles.add(name);
+    while (this.statistics.length <= level) {
+        this.statistics.push({});
+    }
+    if (!this.statistics[level][name]) {
+        this.statistics[level][name] = 0;
+    }
+    this.statistics[level][name] += delta;
+}
+
+Quadtree.prototype.getGlobalStat = function(name) {
+    var sum = 0;
+    for (var level =0; level < this.statistics.length; level++) {
+        var v = this.statistics[level][name];
+        if (v) { sum += v;}
+    }
+    return sum;
+}
+}
 
 Quadtree.prototype.init = function(geometryLayer) {
     var rootNode = this.children[0];

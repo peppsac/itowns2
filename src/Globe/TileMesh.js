@@ -73,16 +73,23 @@ function TileMesh(params, builder, geometryCache) {
     // Layer
     this.setDisplayed(false);
 
+    if (__DEV__) {
+        this.buildHelper();
+        this.elevationLevels = [];
+        this.colorLevels = {};
+    }
 }
 
 TileMesh.prototype = Object.create(NodeMesh.prototype);
 
 TileMesh.prototype.constructor = TileMesh;
 
+if (__DEV__)
+{
 TileMesh.prototype.buildHelper = function() {
 
     // TODO Dispose HELPER!!!
-    var text = (this.level + 1).toString();
+    var text = this.id + '|' + this.level;
 
     var showHelperBox = true;
 
@@ -99,9 +106,9 @@ TileMesh.prototype.buildHelper = function() {
 
         this.helper.translateZ(this.distance);
 
-    this.link.add(this.helper);
-
+    window.itowns.viewer.Debug.helpers.add(this.helper);
 };
+}
 
 TileMesh.prototype.dispose = function() {
     // TODO à mettre dans node mesh

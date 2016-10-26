@@ -188,6 +188,10 @@ Scene.prototype.step = function() {
 
         requestAnimationFrame(function() { this.step(); }.bind(this));
     }
+
+    if (__DEV__) {
+        window.itowns.viewer.updateDebugDisplay();
+    }
 };
 
 /**
@@ -245,6 +249,10 @@ Scene.prototype.select = function( /*layers*/ ) {
 Scene.prototype.selectNodeId = function(id) {
 
     this.browserScene.selectedNodeId = id;
+
+    if (__DEV__) {
+        window.itowns.viewer.setSelectedNode(id);
+    }
 
 };
 

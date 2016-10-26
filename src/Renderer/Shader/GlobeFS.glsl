@@ -40,7 +40,9 @@ varying vec3        vNormal;
 varying vec4        pos;
 
 #if defined(DEBUG)
+    uniform int showOutline;
     const float sLine = 0.008;
+    uniform vec3 borderColor;
 #endif
 
 vec4 getParamLayers(int id)
@@ -72,8 +74,8 @@ void main() {
     #endif
 
     #if defined(DEBUG)
-         if(vUv_WGS84.x < sLine || vUv_WGS84.x > 1.0 - sLine || vUv_WGS84.y < sLine || vUv_WGS84.y > 1.0 - sLine)
-             gl_FragColor = vec4( 1.0, 0.0, 0.0, 1.0);
+         if (showOutline > 0 && (vUv_WGS84.x < sLine || vUv_WGS84.x > 1.0 - sLine || vUv_WGS84.y < sLine || vUv_WGS84.y > 1.0 - sLine))
+             gl_FragColor = vec4( borderColor, 1.0);
          else
     #endif
     {

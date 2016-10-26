@@ -71,6 +71,12 @@ Node.prototype.childrenLoaded = function() {
         }
 
         this.pendingSubdivision = false;
+
+        if (__DEV__) {
+            if (this.materials) {
+                this.materials[0].uniforms.borderColor.value = [0.0, 1.0, 0.0];
+            }
+        }
     }
 
     return true;

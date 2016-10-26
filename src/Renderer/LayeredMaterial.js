@@ -20,7 +20,6 @@ var nbLayer = 2;
 var vector = new THREE.Vector3(0.0, 0.0, 0.0);
 var vector2 = new THREE.Vector2(0.0, 0.0);
 var vector4 = new THREE.Vector4(0.0, 0.0, 0.0, 0.0);
-var showDebug = false;
 var fooTexture;
 
 var getColorAtIdUv = function(nbTex) {
@@ -52,8 +51,17 @@ var LayeredMaterial = function(id) {
     this.fragmentShaderHeader +='const int   TEX_UNITS   = ' + nbSamplers.toString() + ';\n';
     this.fragmentShaderHeader += pitUV;
 
-    if(showDebug)
+    if(__DEV__) {
         this.fragmentShaderHeader += '#define DEBUG\n';
+        this.uniforms.showOutline = {
+            type: "i",
+            value: window.itowns.viewer.Debug.showOutline
+        }
+        this.uniforms.borderColor = {
+            type: "v3",
+            value: [1.0, 1.0, 1.0]
+        }
+    }
 
     this.fragmentShaderHeader += getColorAtIdUv(nbSamplers);
 
