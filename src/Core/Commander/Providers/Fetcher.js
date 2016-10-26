@@ -8,6 +8,12 @@ function checkResponse(response) {
         error.status = response.status;
         throw error;
     }
+
+    if (__DEV__) {
+        if (100 * Math.random() < window.itowns.viewer.Debug.networkErrorRate) {
+            throw new Error('Simulated error');
+        }
+    }
 }
 
 export default {

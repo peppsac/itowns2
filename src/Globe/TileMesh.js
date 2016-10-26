@@ -68,6 +68,12 @@ function TileMesh(params, builder, geometryCache) {
 
     // Layer
     this.setDisplayed(false);
+
+    if (__DEV__) {
+        this.buildHelper();
+        this.elevationLevels = [];
+        this.colorLevels = {};
+    }
 }
 
 TileMesh.prototype = Object.create(NodeMesh.prototype);
@@ -76,9 +82,9 @@ TileMesh.prototype.constructor = TileMesh;
 
 TileMesh.prototype.buildHelper = function buildHelper() {
     // TODO Dispose HELPER!!!
-    var text = (this.level + 1).toString();
+    const text = `${this.id} | ${this.level}`;
 
-    var showHelperBox = true;
+    const showHelperBox = true;
 
     if (showHelperBox)
         { this.helper = new OBBHelper(this.geometry.OBB, text); }
@@ -93,7 +99,7 @@ TileMesh.prototype.buildHelper = function buildHelper() {
 
         { this.helper.translateZ(this.distance); }
 
-    this.link.add(this.helper);
+    window.itowns.viewer.Debug.helpers.add(this.helper);
 };
 
 TileMesh.prototype.dispose = function dispose() {

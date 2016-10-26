@@ -33,7 +33,9 @@ varying float       vUv_PM;
 varying vec3        vNormal;
 
 #if defined(DEBUG)
+    uniform int showOutline;
     const float sLine = 0.008;
+    uniform vec3 borderColor;
 #endif
 
 // Note see after in code
@@ -51,7 +53,7 @@ void main() {
     #endif
 
     #if defined(DEBUG)
-         if(vUv_WGS84.x < sLine || vUv_WGS84.x > 1.0 - sLine || vUv_WGS84.y < sLine || vUv_WGS84.y > 1.0 - sLine)
+         if (showOutline > 0 && (vUv_WGS84.x < sLine || vUv_WGS84.x > 1.0 - sLine || vUv_WGS84.y < sLine || vUv_WGS84.y > 1.0 - sLine))
              gl_FragColor = CRed;
          else
     #endif

@@ -16,6 +16,8 @@ import Projection from 'Core/Geographic/Projection';
 import CustomEvent from 'custom-event';
 import Fetcher from 'Core/Commander/Providers/Fetcher';
 import { STRATEGY_MIN_NETWORK_TRAFFIC } from 'Scene/LayerUpdateStrategy';
+import { createChart, createColumnChart } from 'dev/debug';
+import * as THREE from 'three';
 
 var loaded = false;
 var eventLoaded = new CustomEvent('globe-loaded');
@@ -36,6 +38,228 @@ function ApiGlobe() {
     this.commandsTree = null;
     this.projection = new Projection();
     this.viewerDiv = null;
+
+    if (__DEV__) {
+        this.updateDebugDisplay = function updateDebugDisplay() {
+            for (let i = 0; i < this.Debug.charts.length; i++) {
+                this.Debug.charts[i].update();
+            }
+        };
+
+        this.setSelectedNode = function setSelectedNode(id) {
+            var node = null;
+            const cO = function c0(object) {
+                if (object.id == id) {
+                    node = object;
+                }
+            };
+            this.scene.getMap().tiles.children[0].traverse(cO);
+
+            if (node == null) {
+                return;
+            }
+
+            this.Debug.selectedNodeFolder.__controllers[0].object.id = node.id.toString();
+            this.Debug.selectedNodeFolder.__controllers[0].updateDisplay();
+
+            this.Debug.selectedNodeFolder.__controllers[1].object.level = node.level.toString();
+            this.Debug.selectedNodeFolder.__controllers[1].updateDisplay();
+
+            const colors = this.scene.getMap().layersConfiguration.getColorLayers();
+            while (this.Debug.selectedNodeFolder.__folders.colorLevels.__controllers.length < colors.length) {
+                this.Debug.selectedNodeFolder.__folders.colorLevels.add({ level: '' }, 'level');
+            }
+
+            for (var i in colors) {
+                this.Debug.selectedNodeFolder.__folders.colorLevels.__controllers[i].name(colors[i].id);
+                this.Debug.selectedNodeFolder.__folders.colorLevels.__controllers[i].object.level = JSON.stringify(node.colorLevels[colors[i].id]);
+                this.Debug.selectedNodeFolder.__folders.colorLevels.__controllers[i].updateDisplay();
+            }
+
+            this.Debug.selectedNodeFolder.__controllers[2].object.elevationLevels = JSON.stringify(node.elevationLevels);
+            this.Debug.selectedNodeFolder.__controllers[2].updateDisplay();
+        };
+
+
+        this.createDebugDisplay = function createDebugDisplay(containerId) {
+            this.Debug = {
+                showOutline: false,
+                wireframe: false,
+                helpers: new THREE.Object3D(),
+                charts: [],
+                selectedNodeFolder: null,
+                networkErrorRate: 0.0,
+            };
+
+            this.scene.scene3D().add(this.Debug.helpers);
+            this.Debug.helpers.visible = false;
+
+            // create debug charts
+            createChart(containerId, 'visibility',
+                {
+                    data: [
+                        {
+                            title: 'visible',
+                            data: function d(qt) { return qt.getGlobalStat('visible'); },
+                        },
+                        {
+                            title: 'culled',
+                            data: function d(qt) { return qt.getGlobalStat('culled'); },
+                        },
+                        {
+                            title: 'displayed',
+                            data: function d(qt) { return qt.getGlobalStat('displayed'); },
+                        },
+                    ],
+                    context: this.scene.layers[0].node.tiles,
+                }).then((ch) => {
+                    this.Debug.charts.push(ch);
+
+                    function traceEvent(div, chart, evt, color) {
+                        div.addEventListener(evt, () => {
+                            const cnt = chart.options.data[0].dataPoints.length;
+                            const v = chart.options.data[0].dataPoints[cnt - 1].x;
+                            chart.options.axisX.stripLines.push({
+                                startValue: v,
+                                endValue: v + 0.1,
+                                color,
+                                label: evt,
+                            });
+                        });
+                    }
+                    traceEvent(this.viewerDiv, ch.chart, 'globe-built', '#0000ff');
+                    traceEvent(this.viewerDiv, ch.chart, 'globe-loaded', '#ff0000');
+                });
+
+
+            createChart(containerId, 'Network',
+                {
+                    data: [
+                        { title: 'cache hit', data: function d(wmts) { return wmts.cache.statistics.hit; } },
+                        { title: 'cache miss', data: function d(wmts) { return wmts.cache.statistics.miss; } },
+                        { title: 'cache size', data: function d(wmts) { return wmts.cache.statistics.count; } },
+                        {
+                            title: 'failures',
+                            data: () => {
+                                return this.scene.managerCommand.commandsFailedCount();
+                            },
+                        },
+                    ],
+                    context: this.getProtocolProvider('wmts'),
+                }).then((ch) => { this.Debug.charts.push(ch); });
+
+            createChart(containerId, 'Scene',
+                {
+                    data: [
+                        { title: 'scheduled updates', data: function d(scene) { return scene.counters.scheduledUpdateCount; } },
+                    ],
+                    context: this.scene,
+                }).then((ch) => {
+                    this.Debug.charts.push(ch);
+
+                    function traceEvent(div, chart, evt, color) {
+                        let redraw_count = 0;
+                        div.addEventListener(evt, () => {
+                            redraw_count++;
+                            const cnt = chart.options.data[0].dataPoints.length;
+                            const v = chart.options.data[0].dataPoints[cnt - 1].x;
+                            chart.options.axisX.stripLines.push({
+                                startValue: v,
+                                endValue: v + 0.1,
+                                color,
+                                label: `${evt} ${redraw_count}`,
+                            });
+                        });
+                    }
+                    traceEvent(this.viewerDiv, ch.chart, 'redraw', '#0000ff');
+                });
+
+
+            var levels = [];
+
+            const types = ['visible', 'culled', 'displayed', 'pending-sub'];
+
+            for (const type of types) {
+                levels.push(
+                    {
+                        title: type,
+                        data: function d(qt) {
+                            var res = [];
+                            for (let i = 0; i <= qt.maxLevel; i++) {
+                                res.push({ x: i, y: qt.statistics[i][type], label: i.toString() });
+                            }
+                            return res;
+                        },
+                    });
+            }
+
+            createColumnChart(containerId, 'level',
+                {
+                    data: levels,
+                    context: this.scene.layers[0].node.tiles,
+                }).then((ch) => { this.Debug.charts.push(ch); });
+
+            // create debug UI
+            /* eslint-disable no-undef */
+            const gui = new dat.GUI();
+            /* eslint-enable no-undef */
+
+            // tiles outline
+            gui.add(this.Debug, 'showOutline').name('Show tiles outilne').onChange(
+                (newValue) => {
+                    var cO = function c0(object) {
+                        if (object.materials) {
+                            object.materials[0].uniforms.showOutline.value = newValue;
+                        }
+                    };
+
+                    this.scene.getMap().tiles.children[0].traverse(cO);
+                    this.scene.renderScene3D();
+                });
+
+            // tiles wireframe
+            gui.add(this.Debug, 'wireframe').name('Wireframe').onChange(
+                (newValue) => {
+                    var cO = function c0(object) {
+                        if (object.materials) {
+                            object.materials[0].wireframe = newValue;
+                        }
+                    };
+
+                    this.scene.getMap().tiles.children[0].traverse(cO);
+                    this.scene.renderScene3D();
+                });
+
+            // Toggle OBB visibility
+            gui.add(this.Debug.helpers, 'visible').name('Show OBB').onChange(
+                () => { this.scene.renderScene3D(); });
+
+            gui.add(this.scene, 'maxFramePerSec').name('Max FPS');
+            gui.add(this.Debug, 'networkErrorRate').name('Network Error Rate').min(0).max(100);
+
+            this.Debug.gui = gui;
+            this.Debug.selectedNodeFolder = this.Debug.gui.addFolder('Selected Entity');
+            this.Debug.selectedNodeFolder.add({ id: '' }, 'id');
+            this.Debug.selectedNodeFolder.add({ level: '' }, 'level');
+            this.Debug.selectedNodeFolder.addFolder('colorLevels');
+            this.Debug.selectedNodeFolder.add({ elevationLevels: '' }, 'elevationLevels');
+
+            var parent = document.getElementById(containerId);
+            var closeBtn = document.createElement('div');
+            closeBtn.textContent = 'Close';
+            closeBtn.className = 'itowns-debug-close-button';
+            closeBtn.style = 'width: 100%; position: absolute; top: -20px; height: 20px; color: #000; background-color: #fff; text-align: center; transition: height 1s;';
+            parent.appendChild(closeBtn);
+
+            closeBtn.onclick = function onclick() {
+                if (parent.style.height === '0px') {
+                    parent.style.height = '300px';
+                } else {
+                    parent.style.height = '0px';
+                }
+            };
+        };
+    }
 }
 
 ApiGlobe.prototype.constructor = ApiGlobe;
@@ -928,6 +1152,5 @@ ApiGlobe.prototype.loadGPX = function loadGPX(url) {
 
     this.scene.renderScene3D();
 };
-
 
 export default ApiGlobe;

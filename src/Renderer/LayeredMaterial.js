@@ -18,7 +18,6 @@ emptyTexture.level = -1;
 const layerTypesCount = 2;
 var vector = new THREE.Vector3(0.0, 0.0, 0.0);
 var vector4 = new THREE.Vector4(0.0, 0.0, 0.0, 0.0);
-var showDebug = false;
 var fooTexture;
 
 export const l_ELEVATION = 0;
@@ -85,8 +84,17 @@ var LayeredMaterial = function LayeredMaterial(id) {
     this.fragmentShaderHeader += `const int   TEX_UNITS   = ${nbSamplers.toString()};\n`;
     this.fragmentShaderHeader += pitUV;
 
-    if (showDebug)
-        { this.fragmentShaderHeader += '#define DEBUG\n'; }
+    if (__DEV__) {
+        this.fragmentShaderHeader += '#define DEBUG\n';
+        this.uniforms.showOutline = {
+            type: 'i',
+            value: window.itowns.viewer.Debug.showOutline,
+        };
+        this.uniforms.borderColor = {
+            type: 'v3',
+            value: [1.0, 1.0, 1.0],
+        };
+    }
 
     // see GLOBE FS
     this.fragmentShaderHeader += getColorAtIdUv(nbSamplers);

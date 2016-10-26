@@ -157,6 +157,15 @@ ManagerCommands.prototype.commandsRunningCount = function commandsRunningCount()
     return sum;
 };
 
+ManagerCommands.prototype.commandsFailedCount = function commandsFailedCount() {
+    let sum = this.defaultQueue.counters.failed;
+
+    for (var q of this.hostQueues) {
+        sum += q[1].counters.failed;
+    }
+    return sum;
+};
+
 ManagerCommands.prototype.resetCommandsCount = function resetCommandsCount(type) {
     let sum = this.defaultQueue.counters[type];
     this.defaultQueue.counters[type] = 0;

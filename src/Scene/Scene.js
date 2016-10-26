@@ -68,6 +68,12 @@ function Scene(coordinate, ellipsoid, viewerDiv, debugMode, gLDebug) {
 
     this.viewerDiv = viewerDiv;
     this.renderingState = RENDERING_PAUSED;
+
+    if (__DEV__) {
+        this.counters = {
+            scheduledUpdateCount: 0,
+        };
+    }
 }
 
 Scene.prototype.constructor = Scene;
@@ -136,9 +142,17 @@ Scene.prototype.notifyChange = function notifyChange(delay, needsRedraw) {
     } else {
         this.scheduleUpdate(needsRedraw);
     }
+
+    if (__DEV__) {
+        this.counters.scheduledUpdateCount ++;
+    }
 };
 
 Scene.prototype.scheduleUpdate = function scheduleUpdate(forceRedraw) {
+    if (__DEV__) {
+        this.counters.scheduledUpdateCount --;
+    }
+
     this.needsRedraw |= forceRedraw;
 
     if (this.renderingState !== RENDERING_ACTIVE) {
@@ -196,6 +210,10 @@ Scene.prototype.step = function step() {
 
         requestAnimationFrame(() => { this.step(); });
     }
+
+    if (__DEV__) {
+        window.itowns.viewer.updateDebugDisplay();
+    }
 };
 
 /**
@@ -203,6 +221,10 @@ Scene.prototype.step = function step() {
 Scene.prototype.renderScene3D = function renderScene3D() {
     this.gfxEngine.renderScene();
     this.needsRedraw = false;
+
+    if (__DEV__) {
+        this.viewerDiv.dispatchEvent(new CustomEvent('redraw'));
+    }
 };
 
 Scene.prototype.scene3D = function scene3D() {
@@ -252,6 +274,10 @@ Scene.prototype.select = function select(/* layers*/) {
 
 Scene.prototype.selectNodeId = function selectNodeId(id) {
     this.browserScene.selectedNodeId = id;
+
+    if (__DEV__) {
+        window.itowns.viewer.setSelectedNode(id);
+    }
 };
 
 Scene.prototype.setStreetLevelImageryOn = function setStreetLevelImageryOn(value) {

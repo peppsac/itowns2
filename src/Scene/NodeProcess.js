@@ -80,6 +80,10 @@ NodeProcess.prototype.subdivideNode = function subdivideNode(node, camera, param
         var bboxes = params.tree.subdivideNode(node);
         node.pendingSubdivision = true;
 
+        if (__DEV__) {
+            node.materials[0].uniforms.borderColor.value = [1.0, 0.0, 0.0];
+        }
+
         for (var i = 0; i < bboxes.length; i++) {
             var args = {
                 layer: params.layersConfig.getGeometryLayers()[0],
@@ -273,6 +277,12 @@ function updateNodeImagery(scene, quadtree, node, layersConfig, force) {
         promises.push(quadtree.interCommand.request(args, node, refinementCommandCancellationFn).then(
             (result) => {
                 const level = args.ancestor ? args.ancestor.level : node.level;
+
+                if (__DEV__) {
+                    if (!node.colorLevels[layer.id]) node.colorLevels[layer.id] = [];
+                    node.colorLevels[layer.id].push(level);
+                }
+
                 // Assign .level to texture
                 if (Array.isArray(result)) {
                     for (let j = 0; j < result.length; j++) {
@@ -299,6 +309,10 @@ function updateNodeImagery(scene, quadtree, node, layersConfig, force) {
                 } else {
                     node.layerUpdateState[layer.id].failure(Date.now());
                     scene.notifyChange(node.layerUpdateState[layer.id].secondsUntilNextTry() * 1000, false);
+
+                    if (__DEV__) {
+                        this.counters.network_failure++;
+                    }
                 }
             }));
     }
@@ -405,6 +419,10 @@ function updateNodeElevation(scene, quadtree, node, layersConfig, force) {
                 }
 
                 node.setTextureElevation(terrain);
+
+                if (__DEV__) {
+                    node.elevationLevels.push(`${(ancestor || node).level} / ${bestLayer.id}`);
+                }
             },
             (err) => {
                 if (err instanceof CancelledCommandException) {
@@ -412,6 +430,10 @@ function updateNodeElevation(scene, quadtree, node, layersConfig, force) {
                 } else {
                     node.layerUpdateState[bestLayer.id].failure(Date.now());
                     scene.notifyChange(node.layerUpdateState[bestLayer.id].secondsUntilNextTry() * 1000, false);
+
+                    if (__DEV__) {
+                        this.counters.network_failure++;
+                    }
                 }
             });
     }
