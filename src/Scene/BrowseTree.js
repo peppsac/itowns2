@@ -132,7 +132,7 @@ BrowseTree.prototype._browseNonDisplayableNode = function(node, level, process, 
 
     var sse = process.checkNodeSSE(node);
 
-    if (!sse && !node.loaded) {
+    if (sse && !node.loaded) {
         // Make sure this node is not stuck in a !loaded state
         process.refineNodeLayers(node, camera, params);
     }
