@@ -70,6 +70,16 @@ IoDriver_XBIL.prototype.parseXBil = function(buffer) {
 
 
 IoDriver_XBIL.prototype.read = function(url) {
+    if (__DEV__) {
+        if (Math.random() < window.itowns.viewer.Debug.networkErrorRate) {
+            return new Promise(function(resolve, reject) {
+                setTimeout(function() {
+                    reject(new Error(`(Simulated)Error loading ${url}`));
+                }, 1000 * (0.2 + Math.random()));
+            });
+        }
+    }
+
     return fetch(url).then(response => {
         if (response.status < 200 || response.status >= 300) {
             throw new Error(`Error loading ${url}: status ${response.status}`);

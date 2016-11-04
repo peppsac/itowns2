@@ -774,7 +774,8 @@ if (__DEV__) {
             wireframe: false,
             helpers: new THREE.Object3D(),
             charts: [],
-            selectedNodeFolder: null
+            selectedNodeFolder: null,
+            networkErrorRate: 0.0,
         };
 
         this.scene.scene3D().add(this.Debug.helpers);
@@ -818,12 +819,16 @@ if (__DEV__) {
             }.bind(this));
 
 
-        createChart(containerId, 'Cache',
+        createChart(containerId, 'Network',
             {
                 data: [
-                    { title: 'hit', data: function(wmts) { return wmts.cache.statistics.hit; } },
-                    { title: 'miss', data: function(wmts) { return wmts.cache.statistics.miss; } },
-                    { title: 'elements', data: function(wmts) { return wmts.cache.statistics.count; } },
+                    { title: 'cache hit', data: function(wmts) { return wmts.cache.statistics.hit; } },
+                    { title: 'cache miss', data: function(wmts) { return wmts.cache.statistics.miss; } },
+                    { title: 'cache size', data: function(wmts) { return wmts.cache.statistics.count; } },
+                    { title: 'failures', data: function(wmts) {
+                        return this.scene.layers[0].process.counters.network_failure;
+                    }.bind(this)
+                },
                 ],
                 context: this.getProtocolProvider('wmts')
             }).then(function (ch) { this.Debug.charts.push(ch); }.bind(this));
@@ -888,6 +893,7 @@ if (__DEV__) {
             }.bind(this));
 
         gui.add(this.scene, 'maxFramePerSec').name('Max FPS');
+        gui.add(this.Debug, 'networkErrorRate').name('Network Error Rate');
 
 
 

@@ -24,6 +24,12 @@ function NodeProcess(camera, ellipsoid, bbox) {
     this.r = defaultValue(ellipsoid.size, new THREE.Vector3());
     this.cV = new THREE.Vector3();
     this.projection = new Projection();
+
+    if (__DEV__) {
+        this.counters = {
+            network_failure: 0
+        };
+    }
 }
 
 /**
@@ -175,8 +181,8 @@ NodeProcess.prototype.refineNodeLayers = function(node, camera, params) {
     //     returns false
     //   * elevation uses a grouping strategy (see TileMesh.levelElevation)
     const layerFunctions = [
-        updateNodeElevation,
-        updateNodeImagery
+        updateNodeElevation.bind(this),
+        updateNodeImagery.bind(this)
     ];
 
     for (let i=0; i<2; i++) {
@@ -311,8 +317,12 @@ function updateNodeImagery(quadtree, node, layersConfig, force) {
                     node.layerUpdateState[layer.id].success();
                 } else {
                     node.layerUpdateState[layer.id].failure(Date.now());
+
+                    if (__DEV__) {
+                       this.counters.network_failure++;
+                    }
                 }
-            }
+            }.bind(this)
         ));
     }
 
@@ -432,8 +442,11 @@ function updateNodeElevation(quadtree, node, layersConfig, force) {
                     node.layerUpdateState[bestLayer.id].success();
                 } else {
                     node.layerUpdateState[bestLayer.id].failure(Date.now());
+                    if (__DEV__) {
+                       this.counters.network_failure++;
+                    }
                 }
-            }
+            }.bind(this)
         );
     }
 

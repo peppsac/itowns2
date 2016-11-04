@@ -23,6 +23,15 @@ IoDriver_Image.prototype.read = function(url) {
 
         var image = new Image();
 
+        if (__DEV__) {
+            if (Math.random() < window.itowns.viewer.Debug.networkErrorRate) {
+                setTimeout(function() {
+                    reject(new Error(`(Simulated)Error loading ${url}`));
+                }, 1000 * (0.2 + Math.random()));
+                return;
+            }
+        }
+
         image.onload = () => resolve(image);
 
         image.onerror = () => reject(new Error(`Error loading ${url}`));

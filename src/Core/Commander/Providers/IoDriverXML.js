@@ -22,6 +22,15 @@ IoDriverXML.prototype.read = function(url) {
     // We don't use fetch here because there no direct
     // equivalent to responseType="document"
     return new Promise(function(resolve, reject) {
+        if (__DEV__) {
+            if (Math.random() < window.itowns.viewer.Debug.networkErrorRate) {
+                setTimeout(function() {
+                    reject(new Error(`(Simulated)Error loading ${url}`));
+                }, 1000 * (0.2 + Math.random()));
+                return;
+            }
+        }
+
         var xhr = new XMLHttpRequest();
 
         xhr.open("GET", url, true);
