@@ -298,7 +298,7 @@ function updateNodeImagery(scene, quadtree, node, layersConfig, force) {
                     node.layerUpdateState[layer.id].success();
                 } else {
                     node.layerUpdateState[layer.id].failure(Date.now());
-                    scene.notifyChange(node.layerUpdateState[layer.id].secondsUntilNextTry() * 1000);
+                    scene.notifyChange(node.layerUpdateState[layer.id].secondsUntilNextTry() * 1000, false);
                 }
             }));
     }
@@ -411,7 +411,7 @@ function updateNodeElevation(scene, quadtree, node, layersConfig, force) {
                     node.layerUpdateState[bestLayer.id].success();
                 } else {
                     node.layerUpdateState[bestLayer.id].failure(Date.now());
-                    scene.notifyChange(node.layerUpdateState[bestLayer.id].secondsUntilNextTry() * 1000);
+                    scene.notifyChange(node.layerUpdateState[bestLayer.id].secondsUntilNextTry() * 1000, false);
                 }
             });
     }
