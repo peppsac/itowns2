@@ -14,17 +14,10 @@
  */
 
 import Provider from './Provider';
-import Projection from '../../Geographic/Projection';
-import BuilderEllipsoidTile from '../../../Globe/BuilderEllipsoidTile';
 import TileGeometry from '../../../Globe/TileGeometry';
 
 function TileProvider() {
     Provider.call(this, null);
-
-    this.projection = new Projection();
-    this.builder = new BuilderEllipsoidTile(this.projection);
-
-    this.nNode = 0;
 }
 
 TileProvider.prototype = Object.create(Provider.prototype);
@@ -43,24 +36,22 @@ TileProvider.prototype.executeCommand = function executeCommand(command) {
         segment: 16,
     };
 
-    const geometry = new TileGeometry(params, this.builder);
+    const geometry = new TileGeometry(params, command.layer.builder);
 
     var tile = new command.type(geometry, params);
 
-    tile.setUuid(this.nNode++);
-    tile.link = parent.link;
+    tile.layer = command.layer.id;
+    tile.layers.set(command.threejsLayer);
+    tile.setUuid();
     tile.geometricError = Math.pow(2, (18 - params.level));
 
-    parent.worldToLocal(params.center);
+    if (parent) {
+        parent.worldToLocal(params.center);
+    }
 
     tile.position.copy(params.center);
     tile.setVisibility(false);
-
-    parent.add(tile);
     tile.updateMatrix();
-    tile.updateMatrixWorld();
-    tile.OBB().parent = tile;   // TODO: we should use tile.add(tile.OBB())
-    tile.OBB().update();
 
     return Promise.resolve(tile);
 };

@@ -8,16 +8,10 @@
 
 import CustomEvent from 'custom-event';
 import c3DEngine from '../Renderer/c3DEngine';
-import Globe from '../Globe/Globe';
 import Scheduler from '../Core/Commander/Scheduler';
-import BrowseTree from './BrowseTree';
-import NodeProcess from './NodeProcess';
-import Quadtree from './Quadtree';
 import CoordStars from '../Core/Geographic/CoordStars';
-import { ellipsoidSizes } from '../Core/Geographic/Coordinates';
-import Layer from './Layer';
-import MobileMappingLayer from '../MobileMapping/MobileMappingLayer';
 import StyleManager from './Description/StyleManager';
+import LayersConfiguration from './LayersConfiguration';
 
 var instanceScene = null;
 
@@ -25,15 +19,10 @@ var instanceScene = null;
 const RENDERING_PAUSED = 0;
 const RENDERING_ACTIVE = 1;
 
-function Scene(coordinate, viewerDiv, debugMode, gLDebug) {
+function Scene(positionCamera, size, viewerDiv, debugMode, gLDebug) {
     if (instanceScene !== null) {
         throw new Error('Cannot instantiate more than one Scene');
     }
-
-    var positionCamera = coordinate.as('EPSG:4978');
-
-    this.layers = [];
-    this.map = null;
 
     this.cameras = null;
     this.selectNodes = null;
@@ -43,8 +32,8 @@ function Scene(coordinate, viewerDiv, debugMode, gLDebug) {
     this.stylesManager = new StyleManager();
 
     this.gLDebug = gLDebug;
-    this.gfxEngine = c3DEngine(this, positionCamera.xyz(), viewerDiv, debugMode, gLDebug);
-    this.browserScene = new BrowseTree(this.gfxEngine);
+    this._size = size;
+    this.gfxEngine = c3DEngine(this, positionCamera.as('EPSG:4978').xyz(), viewerDiv, debugMode, gLDebug);
 
     this.needsRedraw = false;
     this.lastRenderTime = 0;
@@ -56,15 +45,10 @@ function Scene(coordinate, viewerDiv, debugMode, gLDebug) {
 
     this.viewerDiv = viewerDiv;
     this.renderingState = RENDERING_PAUSED;
+    this.layersConfiguration = new LayersConfiguration();
 }
 
 Scene.prototype.constructor = Scene;
-/**
- */
-Scene.prototype.updateCommand = function updateCommand() {
-    // TODO: Implement Me
-
-};
 
 /**
  * @documentation: return current camera
@@ -94,12 +78,8 @@ Scene.prototype.getStyles = function getStyles() {
     return this.stylesManager.getStyles();
 };
 
-Scene.prototype.getEllipsoid = function getEllipsoid() {
-    return this.ellipsoid;
-};
-
 Scene.prototype.size = function size() {
-    return ellipsoidSizes();
+    return this._size;
 };
 
 /**
@@ -136,19 +116,60 @@ Scene.prototype.scheduleUpdate = function scheduleUpdate(forceRedraw) {
     }
 };
 
+
+function updateElement(context, layer, element, childrenStages) {
+    const elements = layer.update(context, layer, element);
+
+    if (elements) {
+        for (const element of elements) {
+            for (const s of childrenStages) {
+                updateElement(context, s.layer, element, s.grafted);
+            }
+        }
+    }
+}
+
 Scene.prototype.update = function update() {
-    for (var l = 0; l < this.layers.length; l++) {
-        var layer = this.layers[l].node;
+    this.gfxEngine.camera.update();
 
-        for (var sl = 0; sl < layer.children.length; sl++) {
-            var sLayer = layer.children[sl];
+    // Browse Layer tree
+    const config = this.layersConfiguration;
 
-            if (sLayer instanceof Quadtree) {
-                this.browserScene.updateQuadtree(this.layers[l], this.map.layersConfiguration, this.currentCamera());
-            } else if (sLayer instanceof MobileMappingLayer) {
-                this.browserScene.updateMobileMappingLayer(sLayer, this.currentCamera());
-            } else if (sLayer instanceof Layer) {
-                this.browserScene.updateLayer(sLayer, this.currentCamera());
+    // TODO?
+    const context = {
+        camera: this.gfxEngine.camera,
+        scheduler: this.scheduler,
+        scene: this,
+    };
+
+
+    // call pre-update on all layers
+    config.traverseLayers((layer) => {
+        if (layer.preUpdate) {
+            layer.preUpdate(context, layer);
+        }
+    });
+
+    // update layers
+    for (const stage of config.stages) {
+        const elements = [];
+        const layer = stage.layer;
+        // level 0 layers get a first element-less call
+        layer.update(context, layer).forEach(e => elements.push(e));
+
+        for (let i = 0; i < elements.length; i++) {
+            const element = elements[i];
+
+            // update this element
+            const newElements = layer.update(context, layer, element);
+
+            for (const s of stage.children) {
+                updateElement(context, s.layer, element, s.children);
+            }
+
+            // append elements to update queue
+            if (newElements) {
+                newElements.forEach(e => elements.push(e));
             }
         }
     }
@@ -197,82 +218,30 @@ Scene.prototype.scene3D = function scene3D() {
     return this.gfxEngine.scene3D;
 };
 
-/**
- * @documentation: Ajoute des Layers dans la scène.
- *
- * @param node {[object Object]}
- */
-Scene.prototype.add = function add(node, nodeProcess) {
-    if (node instanceof Globe) {
-        this.map = node;
-        nodeProcess = nodeProcess || new NodeProcess(this);
-    }
-
-    this.layers.push({
-        node,
-        process: nodeProcess,
-    });
-    this.gfxEngine.add3DScene(node.getMesh());
-};
-
-Scene.prototype.getMap = function getMap() {
-    return this.map;
-};
-
-/**
- * @documentation: Retire des layers de la scène
- *
- * @param layer {[object Object]}
- */
-Scene.prototype.remove = function remove(/* layer*/) {
-    // TODO: Implement Me
-
-};
-
-
-/**
- * @param layers {[object Object]}
- */
-Scene.prototype.select = function select(/* layers*/) {
-    // TODO: Implement Me
-
-};
-
 Scene.prototype.selectNodeId = function selectNodeId(id) {
-    this.browserScene.selectedNodeId = id;
-};
+    // browse three.js scene, and mark selected node
+    this.gfxEngine.scene3D.traverse((node) => {
+        // only take of selectable nodes
+        if (node.setSelected) {
+            node.setSelected(node.id === id);
 
-Scene.prototype.setStreetLevelImageryOn = function setStreetLevelImageryOn(value) {
-    if (value) {
-        if (this.layers[1]) {
-            this.layers[1].node.visible = true;
-            this.layers[1].node.children[0].visible = true;
-        } else {
-            var mobileMappingLayer = new MobileMappingLayer();
-            mobileMappingLayer.initiatePanoramic();
-
-            var immersive = new Layer();
-            immersive.add(mobileMappingLayer);
-            this.add(immersive);
+            if (node.id === id) {
+                // eslint-disable-next-line no-console
+                console.info(node);
+            }
         }
-    } else {
-        this.layers[1].node.visible = false;
-        this.layers[1].node.children[0].visible = false; // mobileMappingLayer
-    }
-
-    this.updateScene3D();
+    });
 };
 
-Scene.prototype.setLightingPos = function setLightingPos(pos) {
-    if (pos) {
-        this.lightingPos = pos;
-    } else {
-        const coSun = CoordStars.getSunPositionInScene(new Date().getTime(), 48.85, 2.35);
-        this.lightingPos = coSun.normalize();
-    }
-
-    this.browserScene.updateMaterialUniform('lightPosition', this.lightingPos.clone().normalize());
-    this.layers[0].node.updateLightingPos(this.lightingPos);
+Scene.prototype.updateMaterialUniform = function updateMaterialUniform(uniformName, value) {
+    this.gfxEngine.scene3D.traverse((obj) => {
+        if (!obj.material || !obj.material.uniforms) {
+            return;
+        }
+        if (uniformName in obj.material.uniforms) {
+            obj.material.uniforms[uniformName].value = value;
+        }
+    });
 };
 
 // Should be moved in time module: A single loop update registered object every n millisec
@@ -284,7 +253,7 @@ Scene.prototype.animateTime = function animateTime(value) {
             var nMilliSeconds = this.time;
             var coSun = CoordStars.getSunPositionInScene(new Date().getTime() + 3.6 * nMilliSeconds, 0, 0);
             this.lightingPos = coSun;
-            this.browserScene.updateMaterialUniform('lightPosition', this.lightingPos.clone().normalize());
+            this.updateMaterialUniform('lightPosition', this.lightingPos.clone().normalize());
             this.layers[0].node.updateLightingPos(this.lightingPos);
             if (this.orbitOn) { // ISS orbit is 0.0667 degree per second -> every 60th of sec: 0.00111;
                 var p = this.gfxEngine.camera.camera3D.position;
