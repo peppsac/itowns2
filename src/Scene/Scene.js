@@ -46,6 +46,8 @@ function Scene(positionCamera, size, viewerDiv, debugMode, gLDebug) {
     this.viewerDiv = viewerDiv;
     this.renderingState = RENDERING_PAUSED;
     this.layersConfiguration = new LayersConfiguration();
+
+    this.nextThreejsLayer = 0;
 }
 
 Scene.prototype.constructor = Scene;
@@ -276,7 +278,23 @@ Scene.prototype.orbit = function orbit(value) {
     this.orbitOn = value;
 };
 
-export default function (coordinate, viewerDiv, debugMode, gLDebug) {
-    instanceScene = instanceScene || new Scene(coordinate, viewerDiv, debugMode, gLDebug);
+Scene.prototype.getUniqueThreejsLayer = function getUniqueThreejsLayer() {
+    // We use three.js Object3D.layers feature to manage visibility of
+    // geometry layers; so we need an internal counter to assign a new
+    // one to each new geometry layer.
+    // Warning: only 32 ([0, 31]) different layers can exist.
+    if (this.nextThreejsLayer > 31) {
+        // eslint-disable-next-line no-console
+        console.warn('Too much three.js layers. Starting from now all of them will use layerMask = 31');
+        this.nextThreejsLayer = 31;
+    }
+
+    const result = this.nextThreejsLayer++;
+
+    return result;
+};
+
+export default function (coordinate, size, viewerDiv, debugMode, gLDebug) {
+    instanceScene = instanceScene || new Scene(coordinate, size, viewerDiv, debugMode, gLDebug);
     return instanceScene;
 }

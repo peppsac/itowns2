@@ -21,7 +21,7 @@ function subdivisionBoundingBoxes(bbox) {
     return result;
 }
 
-function requestNewTile(scheduler, geometryLayer, bbox, parent, level) {
+function requestNewTile(scheduler, config, geometryLayer, bbox, parent, level) {
     const command = {
         /* mandatory */
         requester: parent,
@@ -32,6 +32,7 @@ function requestNewTile(scheduler, geometryLayer, bbox, parent, level) {
         type: geometryLayer.nodeType,
         level,
         redraw: false,
+        threejsLayer: config.getLayerAttribute(geometryLayer.id, 'threejsLayer'),
     };
 
     return scheduler.execute(command).then((node) => {
@@ -50,7 +51,7 @@ function subdivideNode(context, layer, node) {
         const children = [];
         for (let i = 0; i < bboxes.length; i++) {
             promises.push(
-                requestNewTile(context.scheduler, layer, bboxes[i], node).then((child) => {
+                requestNewTile(context.scheduler, context.scene.layersConfiguration, layer, bboxes[i], node).then((child) => {
                     children.push(child);
                     return layer.initNewNode(context, layer, node, child);
                 }));
@@ -82,7 +83,7 @@ export function initTiledGeometryLayer() {
 
         for (let i = 0; i < layer.schemeTile.rootCount(); i++) {
             _promises.push(
-                requestNewTile(context.scheduler, layer, layer.schemeTile.getRoot(i), undefined, 0));
+                requestNewTile(context.scheduler, context.scene.layersConfiguration, layer, layer.schemeTile.getRoot(i), undefined, 0));
         }
         Promise.all(_promises).then((level0s) => {
             layer.level0Nodes = level0s;
