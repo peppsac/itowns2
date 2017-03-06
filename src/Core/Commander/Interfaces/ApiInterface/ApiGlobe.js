@@ -412,8 +412,11 @@ ApiGlobe.prototype.createSceneGlobe = function createSceneGlobe(globeLayerId, co
 
     const nodeInitFn = function nodeInitFn(context, layer, parent, node) {
         return initNewNode(context, layer, parent, node).then(() => {
-            node.materials[0].setLightingOn(layer.lighting.enable);
-            node.materials[0].uniforms.lightPosition.value = layer.lighting.position;
+            const lighting = context.scene.layersConfiguration.getLayerAttribute(
+                layer.id, 'lighting');
+
+            node.materials[0].setLightingOn(lighting.enable);
+            node.materials[0].uniforms.lightPosition.value = lighting.position;
         });
     };
 
@@ -436,12 +439,15 @@ ApiGlobe.prototype.createSceneGlobe = function createSceneGlobe(globeLayerId, co
         cullingTest: globeCulling,
         initNewNode: nodeInitFn,
         mustSubdivide: globeSubdivisionControl,
-        // lighting options
-        lighting: {
+    };
+
+    this.addGeometryLayer(wgs84TileLayer);
+
+    this.scene.layersConfiguration.setLayerAttribute(wgs84TileLayer.id,
+        'lighting', {
             enable: false,
             position: { x: -0.5, y: 0.0, z: 1.0 },
-        },
-    };
+        });
 
     this.atmosphere = new Atmosphere();
     this.clouds = new Clouds();
@@ -465,13 +471,10 @@ ApiGlobe.prototype.setRealisticLightingOn = function setRealisticLightingOn(valu
 
     this.lightingPos = coSun.normalize();
 
-    this.scene.layersConfiguration.traverseLayers(
-        (layer) => {
-            if (layer.id == this.globeLayerId) {
-                layer.lighting.enable = value;
-                layer.lighting.position = coSun;
-            }
-        });
+    const lighting = this.scene.layersConfiguration.getLayerAttribute(
+        this.globeLayerId, 'lighting');
+    lighting.enable = value;
+    lighting.position = coSun;
 
     this.atmosphere.updateLightingPos(coSun);
     this.atmosphere.setRealisticOn(value);
