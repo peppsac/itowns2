@@ -11,7 +11,7 @@ import c3DEngine from '../Renderer/c3DEngine';
 import Scheduler from '../Core/Commander/Scheduler';
 import CoordStars from '../Core/Geographic/CoordStars';
 import StyleManager from './Description/StyleManager';
-import LayersConfiguration from './LayersConfiguration';
+import LayersConfiguration from './SceneConfiguration';
 
 var instanceScene = null;
 
@@ -45,7 +45,7 @@ function Scene(positionCamera, size, viewerDiv, debugMode, gLDebug) {
 
     this.viewerDiv = viewerDiv;
     this.renderingState = RENDERING_PAUSED;
-    this.layersConfiguration = new LayersConfiguration();
+    this.configuration = new LayersConfiguration();
 
     this.nextThreejsLayer = 0;
 }
@@ -135,7 +135,7 @@ Scene.prototype.update = function update() {
     this.gfxEngine.camera.update();
 
     // Browse Layer tree
-    const config = this.layersConfiguration;
+    const config = this.configuration;
 
     // TODO?
     const context = {
@@ -153,9 +153,9 @@ Scene.prototype.update = function update() {
     });
 
     // update layers
-    for (const stage of config.stages) {
+    for (const tree of config.layerTrees) {
         const elements = [];
-        const layer = stage.layer;
+        const layer = tree.layer;
         // level 0 layers get a first element-less call
         layer.update(context, layer).forEach(e => elements.push(e));
 
@@ -165,7 +165,7 @@ Scene.prototype.update = function update() {
             // update this element
             const newElements = layer.update(context, layer, element);
 
-            for (const s of stage.children) {
+            for (const s of tree.children) {
                 updateElement(context, s.layer, element, s.children);
             }
 

@@ -51,7 +51,7 @@ function subdivideNode(context, layer, node) {
         const children = [];
         for (let i = 0; i < bboxes.length; i++) {
             promises.push(
-                requestNewTile(context.scheduler, context.scene.layersConfiguration, layer, bboxes[i], node).then((child) => {
+                requestNewTile(context.scheduler, context.scene.configuration, layer, bboxes[i], node).then((child) => {
                     children.push(child);
                     return layer.initNewNode(context, layer, node, child);
                 }));
@@ -83,7 +83,7 @@ export function initTiledGeometryLayer() {
 
         for (let i = 0; i < layer.schemeTile.rootCount(); i++) {
             _promises.push(
-                requestNewTile(context.scheduler, context.scene.layersConfiguration, layer, layer.schemeTile.getRoot(i), undefined, 0));
+                requestNewTile(context.scheduler, context.scene.configuration, layer, layer.schemeTile.getRoot(i), undefined, 0));
         }
         Promise.all(_promises).then((level0s) => {
             layer.level0Nodes = level0s;

@@ -117,11 +117,11 @@ function preprocessLayer(layer, provider) {
 ApiGlobe.prototype.addGeometryLayer = function addGeometryLayer(layer, parentLayerId) {
     preprocessLayer(layer, this.scene.scheduler.getProtocolProvider(layer.protocol));
 
-    this.scene.layersConfiguration.addLayer(layer, parentLayerId);
+    this.scene.configuration.addLayer(layer, parentLayerId);
 
     const threejsLayer = this.scene.getUniqueThreejsLayer();
-    this.scene.layersConfiguration.setLayerAttribute(layer.id, 'type', 'geometry');
-    this.scene.layersConfiguration.setLayerAttribute(layer.id, 'threejsLayer', threejsLayer);
+    this.scene.configuration.setLayerAttribute(layer.id, 'type', 'geometry');
+    this.scene.configuration.setLayerAttribute(layer.id, 'threejsLayer', threejsLayer);
 
     // enable by default
     this.scene.currentCamera().camera3D.layers.enable(threejsLayer);
@@ -140,13 +140,13 @@ ApiGlobe.prototype.addImageryLayer = function addImageryLayer(layer, parentLayer
     // assume all imageryLayer for globe use LayeredMaterial
     layer.update = updateLayeredMaterialNodeImagery;
 
-    this.scene.layersConfiguration.addLayer(layer, parentLayerId);
-    this.scene.layersConfiguration.setLayerAttribute(layer.id, 'type', 'color');
-    this.scene.layersConfiguration.setLayerAttribute(layer.id, 'frozen', false);
-    this.scene.layersConfiguration.setLayerAttribute(layer.id, 'visible', true);
-    this.scene.layersConfiguration.setLayerAttribute(layer.id, 'opacity', 1.0);
-    const colorLayerCount = this.scene.layersConfiguration.getLayers(l => this.scene.layersConfiguration.getLayerAttribute(l.id, 'type') === 'color').length;
-    this.scene.layersConfiguration.setLayerAttribute(layer.id, 'sequence', colorLayerCount);
+    this.scene.configuration.addLayer(layer, parentLayerId);
+    this.scene.configuration.setLayerAttribute(layer.id, 'type', 'color');
+    this.scene.configuration.setLayerAttribute(layer.id, 'frozen', false);
+    this.scene.configuration.setLayerAttribute(layer.id, 'visible', true);
+    this.scene.configuration.setLayerAttribute(layer.id, 'opacity', 1.0);
+    const colorLayerCount = this.scene.configuration.getLayers(l => this.scene.configuration.getLayerAttribute(l.id, 'type') === 'color').length;
+    this.scene.configuration.setLayerAttribute(layer.id, 'sequence', colorLayerCount);
 
     this.viewerDiv.dispatchEvent(eventLayerAdded);
 
@@ -196,9 +196,9 @@ ApiGlobe.prototype.addElevationLayer = function addElevationLayer(layer, parentL
     // assume all imageryLayer for globe use LayeredMaterial
     layer.update = updateLayeredMaterialNodeElevation;
 
-    this.scene.layersConfiguration.addLayer(layer, parentLayerId);
-    this.scene.layersConfiguration.setLayerAttribute(layer.id, 'type', 'elevation');
-    this.scene.layersConfiguration.setLayerAttribute(layer.id, 'frozen', false);
+    this.scene.configuration.addLayer(layer, parentLayerId);
+    this.scene.configuration.setLayerAttribute(layer.id, 'type', 'elevation');
+    this.scene.configuration.setLayerAttribute(layer.id, 'frozen', false);
 
     this.viewerDiv.dispatchEvent(eventLayerAdded);
 
@@ -257,14 +257,14 @@ function updateLayersOrdering(layersConfiguration, globeLayerId) {
 }
 
 ApiGlobe.prototype.moveLayerUp = function moveLayerUp(layerId) {
-    this.scene.layersConfiguration.moveLayerUp(layerId);
-    updateLayersOrdering(this.scene.layersConfiguration, this.globeLayerId);
+    this.scene.configuration.moveLayerUp(layerId);
+    updateLayersOrdering(this.scene.configuration, this.globeLayerId);
     this.scene.renderScene3D();
 };
 
 ApiGlobe.prototype.moveLayerDown = function moveLayerDown(layerId) {
-    this.scene.layersConfiguration.moveLayerDown(layerId);
-    updateLayersOrdering(this.scene.layersConfiguration, this.globeLayerId);
+    this.scene.configuration.moveLayerDown(layerId);
+    updateLayersOrdering(this.scene.configuration, this.globeLayerId);
     this.scene.renderScene3D();
 };
 
@@ -275,8 +275,8 @@ ApiGlobe.prototype.moveLayerDown = function moveLayerDown(layerId) {
  * @param      {number}  newIndex   The new index
  */
 ApiGlobe.prototype.moveLayerToIndex = function moveLayerToIndex(layerId, newIndex) {
-    this.scene.layersConfiguration.moveLayerToIndex(layerId, newIndex);
-    updateLayersOrdering(this.scene.layersConfiguration, this.globeLayerId);
+    this.scene.configuration.moveLayerToIndex(layerId, newIndex);
+    updateLayersOrdering(this.scene.configuration, this.globeLayerId);
     this.scene.renderScene3D();
     eventLayerChangedIndex.layerIndex = newIndex;
     eventLayerChangedIndex.layerId = layerId;
@@ -290,7 +290,7 @@ ApiGlobe.prototype.moveLayerToIndex = function moveLayerToIndex(layerId, newInde
  * @return     {boolean}  { description_of_the_return_value }
  */
 ApiGlobe.prototype.removeImageryLayer = function removeImageryLayer(id) {
-    if (this.scene.layersConfiguration.removeLayer(id)) {
+    if (this.scene.configuration.removeLayer(id)) {
         this.scene.renderScene3D();
         eventLayerRemoved.layer = id;
         this.viewerDiv.dispatchEvent(eventLayerRemoved);
@@ -352,7 +352,7 @@ ApiGlobe.prototype.getMaxZoomLevel = function getMaxZoomLevel(index) {
  * @return     {layer}  The Layers.
  */
 ApiGlobe.prototype.getImageryLayers = function getImageryLayers() {
-    return this.scene.layersConfiguration.getLayers((layer, attributes) => attributes.type === 'color');
+    return this.scene.configuration.getLayers((layer, attributes) => attributes.type === 'color');
 };
 
 ApiGlobe.prototype.initProviders = function initProviders(scene) {
@@ -412,7 +412,7 @@ ApiGlobe.prototype.createSceneGlobe = function createSceneGlobe(globeLayerId, co
 
     const nodeInitFn = function nodeInitFn(context, layer, parent, node) {
         return initNewNode(context, layer, parent, node).then(() => {
-            const lighting = context.scene.layersConfiguration.getLayerAttribute(
+            const lighting = context.scene.configuration.getLayerAttribute(
                 layer.id, 'lighting');
 
             node.materials[0].setLightingOn(lighting.enable);
@@ -443,7 +443,7 @@ ApiGlobe.prototype.createSceneGlobe = function createSceneGlobe(globeLayerId, co
 
     this.addGeometryLayer(wgs84TileLayer);
 
-    this.scene.layersConfiguration.setLayerAttribute(wgs84TileLayer.id,
+    this.scene.configuration.setLayerAttribute(wgs84TileLayer.id,
         'lighting', {
             enable: false,
             position: { x: -0.5, y: 0.0, z: 1.0 },
@@ -471,7 +471,7 @@ ApiGlobe.prototype.setRealisticLightingOn = function setRealisticLightingOn(valu
 
     this.lightingPos = coSun.normalize();
 
-    const lighting = this.scene.layersConfiguration.getLayerAttribute(
+    const lighting = this.scene.configuration.getLayerAttribute(
         this.globeLayerId, 'lighting');
     lighting.enable = value;
     lighting.position = coSun;
@@ -494,9 +494,9 @@ ApiGlobe.prototype.setRealisticLightingOn = function setRealisticLightingOn(valu
  */
 
 ApiGlobe.prototype.setLayerVisibility = function setLayerVisibility(id, visible) {
-    this.scene.layersConfiguration.setLayerAttribute(id, 'visible', visible);
+    this.scene.configuration.setLayerAttribute(id, 'visible', visible);
 
-    const threejsLayer = this.scene.layersConfiguration.getLayerAttribute(id, 'threejsLayer');
+    const threejsLayer = this.scene.configuration.getLayerAttribute(id, 'threejsLayer');
     if (threejsLayer != undefined) {
         if (visible) {
             this.scene.camera.camera3D.layers.enable(threejsLayer);
@@ -527,7 +527,7 @@ ApiGlobe.prototype.orbit = function orbit(value) {
  */
 
 ApiGlobe.prototype.setLayerOpacity = function setLayerOpacity(id, opacity) {
-    this.scene.layersConfiguration.setLayerAttribute(id, 'opacity', opacity);
+    this.scene.configuration.setLayerAttribute(id, 'opacity', opacity);
     this.scene.notifyChange(0, true);
     eventLayerChangedOpacity.layerId = id;
     eventLayerChangedOpacity.opacity = opacity;

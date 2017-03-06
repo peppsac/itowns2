@@ -206,7 +206,7 @@ function Debug(scene) {
 
     // tiles outline
     gui.add(state, 'showOutline').name('Show tiles outline').onChange((newValue) => {
-        scene.layersConfiguration.traverseLayers((layer) => {
+        scene.configuration.traverseLayers((layer) => {
             layer.showOutline = newValue;
         });
         applyToNodeFirstMaterial((material) => {
@@ -217,7 +217,7 @@ function Debug(scene) {
 
     // tiles wireframe
     gui.add(state, 'wireframe').name('Wireframe').onChange((newValue) => {
-        scene.layersConfiguration.traverseLayers((layer) => {
+        scene.configuration.traverseLayers((layer) => {
             layer.wireframe = newValue;
         });
         applyToNodeFirstMaterial((material) => {
