@@ -452,7 +452,16 @@ ApiGlobe.prototype.createSceneGlobe = function createSceneGlobe(globeLayerId, co
     this.atmosphere = new Atmosphere();
     this.clouds = new Clouds();
     this.atmosphere.add(this.clouds);
+
+    const atmosphereLayer = this.scene.getUniqueThreejsLayer();
+    this.atmosphere.traverse((obj) => { obj.layers.set(atmosphereLayer); });
+    this.scene.currentCamera().camera3D.layers.enable(atmosphereLayer);
+
     this.scene.gfxEngine.scene3D.add(this.atmosphere);
+
+    // enable only globe-rendering when performing picking
+    this.scene.currentControls().controlsActiveLayers = 1 <<
+        this.scene.configuration.getLayerAttribute(wgs84TileLayer.id, 'threejsLayer');
 
     return wgs84TileLayer;
 };

@@ -324,6 +324,8 @@ function GlobeControls(camera, domElement, engine) {
     // Enable Damping
     this.enableDamping = true;
 
+    this.controlsActiveLayers = undefined;
+
     if (enableTargetHelper) {
         this.pickingHelper = new THREE.AxisHelper(500000);
     }
@@ -481,9 +483,15 @@ function GlobeControls(camera, domElement, engine) {
         var engineGfx = engine;
         var position;
 
-        return function getPickingPosition(coords)
+
+        return function getPickingPosition(controlsActiveLayers, coords)
         {
+            const prev = engineGfx.camera.camera3D.layers.mask;
+            if (controlsActiveLayers) {
+                engineGfx.camera.camera3D.layers.mask = controlsActiveLayers;
+            }
             position = engineGfx.getPickingPositionFromDepth(coords);
+            engineGfx.camera.camera3D.layers.mask = prev;
             engineGfx.renderScene();
 
             return position;
@@ -645,7 +653,7 @@ function GlobeControls(camera, domElement, engine) {
     // update globe target
     var updateGlobeTarget = function updateGlobeTarget() {
         // Get distance camera DME
-        const pickingPosition = getPickingPosition();
+        const pickingPosition = getPickingPosition(this.controlsActiveLayers);
 
         if (!pickingPosition) {
             return;
@@ -807,7 +815,8 @@ function GlobeControls(camera, domElement, engine) {
                     ptScreenClick.x = event.clientX - event.target.offsetLeft;
                     ptScreenClick.y = event.clientY - event.target.offsetTop;
 
-                    const point = getPickingPosition(ptScreenClick);
+                    const point = getPickingPosition(
+                        this.controlsActiveLayers, ptScreenClick);
                     lastRotation = [];
                     // update tangent sphere which passes through the point
                     if (point) {
@@ -849,7 +858,7 @@ function GlobeControls(camera, domElement, engine) {
             ptScreenClick.x = event.clientX - event.target.offsetLeft;
             ptScreenClick.y = event.clientY - event.target.offsetTop;
 
-            const point = getPickingPosition(ptScreenClick);
+            const point = getPickingPosition(this.controlsActiveLayers, ptScreenClick);
 
             if (point) {
                 animatedScale = 0.6;
