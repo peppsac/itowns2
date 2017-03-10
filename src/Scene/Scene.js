@@ -50,8 +50,6 @@ function Scene(positionCamera, size, viewerDiv, debugMode, gLDebug) {
     this.nextThreejsLayer = 0;
 }
 
-Scene.prototype.constructor = Scene;
-
 /**
  * @documentation: return current camera
  * @returns {Scene_L7.Scene.gfxEngine.camera}

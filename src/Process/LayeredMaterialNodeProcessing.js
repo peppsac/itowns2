@@ -171,8 +171,8 @@ function _updateLayeredMaterialNodeImagery(context, layer, node, parent) {
             const level = ancestor ? ancestor.level : node.level;
             // Assign .level to texture
             if (Array.isArray(result)) {
-                for (let j = 0; j < result.length; j++) {
-                    result[j].texture.level = level;
+                for (const r of result) {
+                    r.texture.level = level;
                 }
 
                 node.setTexturesLayer(result, l_COLOR, layer.id);

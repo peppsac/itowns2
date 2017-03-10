@@ -47,9 +47,8 @@ function horizonCulling(node) {
     var points = node.OBB().pointsWorld;
     var isVisible = false;
 
-    for (var i = 0, max = points.length; i < max; i++) {
-        const point = points[i].clone();
-        if (!pointHorizonCulling(point)) {
+    for (const point of points) {
+        if (!pointHorizonCulling(point.clone())) {
             isVisible = true;
             break;
         }

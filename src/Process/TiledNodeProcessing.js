@@ -42,16 +42,16 @@ function requestNewTile(scheduler, config, geometryLayer, bbox, parent, level) {
 }
 
 function subdivideNode(context, layer, node) {
-    if (!node.pendingSubdivision && node.children.filter(n => n.layer == layer.id).length == 0) {
+    if (!node.pendingSubdivision && !node.children.some(n => n.layer == layer.id)) {
         const bboxes = subdivisionBoundingBoxes(node.bbox);
         // TODO: pendingSubdivision mechanism is fragile, get rid of it
         node.pendingSubdivision = true;
 
         const promises = [];
         const children = [];
-        for (let i = 0; i < bboxes.length; i++) {
+        for (const bbox of bboxes) {
             promises.push(
-                requestNewTile(context.scheduler, context.scene.configuration, layer, bboxes[i], node).then((child) => {
+                requestNewTile(context.scheduler, context.scene.configuration, layer, bbox, node).then((child) => {
                     children.push(child);
                     return layer.initNewNode(context, layer, node, child);
                 }));
