@@ -422,15 +422,13 @@ ApiGlobe.prototype.createSceneGlobe = function createSceneGlobe(globeLayerId, co
 
     // add geom stage
     geometry = scene.attach(
-        {
-            preUpdate: preGlobeUpdate,
-            update: updateTreeLayer2(
-                initTiledGeometryLayer2(globeSchemeTileWMTS(globeSchemeTile1)),
-                processTiledGeometryNode2(
-                    globeCulling,
-                    globeSubdivisionControl(18),
-                    nodeInitFn)),
-        },
+        preGlobeUpdate,
+        updateTreeLayer2(
+            initTiledGeometryLayer2(globeSchemeTileWMTS(globeSchemeTile1)),
+            processTiledGeometryNode2(
+                globeCulling,
+                globeSubdivisionControl(18),
+                nodeInitFn)),
         {
             id: globeLayerId,
             nodeType: TileMesh,
@@ -440,9 +438,7 @@ ApiGlobe.prototype.createSceneGlobe = function createSceneGlobe(globeLayerId, co
 
     // imagery
     geometry.attach(
-        {
-            update: updateLayeredMaterialNodeImagery,
-        },
+        updateLayeredMaterialNodeImagery,
         {
             id         : 'wms_imagery',
             url        : "https://download.data.grandlyon.com/wms/grandlyon",
@@ -456,9 +452,7 @@ ApiGlobe.prototype.createSceneGlobe = function createSceneGlobe(globeLayerId, co
 
     // elevation
     geometry.attach(
-        {
-            update: updateLayeredMaterialNodeImagery,
-        },
+        update: updateLayeredMaterialNodeImagery,
         {
             id         : 'wms_elevation',
             url        : "https://download.data.grandlyon.com/wms/grandlyon",
