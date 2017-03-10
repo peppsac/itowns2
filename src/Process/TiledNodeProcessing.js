@@ -41,7 +41,7 @@ function requestNewTile(scheduler, config, geometryLayer, bbox, parent, level) {
     });
 }
 
-function subdivideNode(context, layer, node) {
+function subdivideNode(context, layer, node, initNewNode) {
     if (!node.pendingSubdivision && !node.children.some(n => n.layer == layer.id)) {
         const bboxes = subdivisionBoundingBoxes(node.bbox);
         // TODO: pendingSubdivision mechanism is fragile, get rid of it
@@ -53,7 +53,7 @@ function subdivideNode(context, layer, node) {
             promises.push(
                 requestNewTile(context.scheduler, context.scene.configuration, layer, bbox, node).then((child) => {
                     children.push(child);
-                    return layer.initNewNode(context, layer, node, child);
+                    return initNewNode(context, layer, node, child);
                 }));
         }
 
@@ -84,6 +84,32 @@ export function initTiledGeometryLayer() {
         for (let i = 0; i < layer.schemeTile.rootCount(); i++) {
             _promises.push(
                 requestNewTile(context.scheduler, context.scene.configuration, layer, layer.schemeTile.getRoot(i), undefined, 0));
+        }
+        Promise.all(_promises).then((level0s) => {
+            layer.level0Nodes = level0s;
+            for (const level0 of level0s) {
+                // TODO: support a layer.root attribute, to be able
+                // to add a layer to a three.js node, e.g:
+                // layer.root.add(level0);
+                context.scene.gfxEngine.scene3D.add(level0);
+                level0.updateMatrixWorld();
+            }
+        });
+    };
+}
+
+export function initTiledGeometryLayer2(schemeTile) {
+    const _promises = [];
+    return function initTiled(context, layer) {
+        if (_promises.length > 0) {
+            return;
+        }
+
+        layer.level0Nodes = [];
+
+        for (let i = 0; i < schemeTile.rootCount(); i++) {
+            _promises.push(
+                requestNewTile(context.scheduler, context.scene.configuration, layer, schemeTile.getRoot(i), undefined, 0));
         }
         Promise.all(_promises).then((level0s) => {
             layer.level0Nodes = level0s;
@@ -156,5 +182,54 @@ export function processTiledGeometryNode(context, layer, node) {
     _removeChildren(layer, node);
 
     // TODO: cleanup tree
+    return undefined;
+}
+
+export function processTiledGeometryNode2(cullingTest, subdivisionTest, initNewNode) {
+    return function(context, layer, node) {
+    // early exit if parent' subdivision is in progress
+    if (node.parent.pendingSubdivision) {
+        node.visible = false;
+        node.setDisplayed(false);
+        return undefined;
+    }
+
+    // do proper culling
+    const isVisible = cullingTest ? (!cullingTest(node, context.camera)) : true;
+    node.visible = isVisible;
+
+
+    if (isVisible) {
+        let requestChildrenUpdate = false;
+
+        if (node.pendingSubdivision || subdivisionTest(context, layer, node)) {
+            subdivideNode(context, layer, node, initNewNode);
+            // display iff children aren't ready
+            node.setDisplayed(node.pendingSubdivision);
+            requestChildrenUpdate = true;
+        } else {
+            node.setDisplayed(true);
+        }
+
+        if (node.material.visible) {
+            // update uniforms
+            const positionWorld = new THREE.Vector3();
+            positionWorld.setFromMatrixPosition(node.matrixWorld);
+            node.setMatrixRTC(
+                context.scene.gfxEngine.getRTCMatrixFromCenter(
+                    positionWorld, context.camera));
+            node.setFog(1000000000);
+
+            if (!requestChildrenUpdate) {
+                _removeChildren(layer, node);
+            }
+        }
+
+        return requestChildrenUpdate ? node.children.filter(n => n.layer == layer.id) : undefined;
+    }
+
+    node.setDisplayed(false);
+    _removeChildren(layer, node);
+
     return undefined;
 }

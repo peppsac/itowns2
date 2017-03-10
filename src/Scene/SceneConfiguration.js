@@ -4,7 +4,7 @@
  */
 
 function SceneConfiguration() {
-    this.layerTrees = [];
+    this.pipelines = [];
 
     // layers state (visibility, opacity)
     this.layersState = {};
@@ -15,16 +15,16 @@ SceneConfiguration.prototype.constructor = SceneConfiguration;
 // Helper func to call fn() on each layer
 function _traverseLayers(fn, stage) {
     fn(stage.layer);
-    for (const child of stage.children) {
+    for (const child of stage.subStages) {
         _traverseLayers(fn, child);
     }
 }
 
-// Helper func to call fn() on each stage
-function _traverseLayerTrees(fn, stage) {
+// Helper func to call fn() on each stage of the pipeline
+function _traversePipeline(fn, pipeline) {
     fn(stage);
-    for (const child of stage.children) {
-        _traverseLayerTrees(fn, child);
+    for (const subStage of stage.subStages) {
+        _traversePipeline(fn, subStage);
     }
 }
 
@@ -38,14 +38,14 @@ SceneConfiguration.prototype.addLayer = function addLayer(layer, parentLayerId) 
     }
 
     if (parentLayerId === undefined) {
-        this.layerTrees.push({ layer, children: [] });
+        this.pipelines.push({ layer, subStages: [] });
     } else if (!(parentLayerId in this.layersState)) {
         throw new Error(`Cannot attach layer ${layer.id} to non-added layer ${parentLayerId}`);
     } else {
         // traverse stages and attach as a child of parentLayerId
-        this.traverseLayerTrees((stage) => {
+        this.traversepipelines((stage) => {
             if (stage.layer.id === parentLayerId) {
-                stage.children.push({ layer, children: [] });
+                stage.subStages.push({ layer, subStages: [] });
             }
         });
     }
@@ -55,17 +55,17 @@ SceneConfiguration.prototype.addLayer = function addLayer(layer, parentLayerId) 
 
 SceneConfiguration.prototype.removeLayer = function removeLayer(id) {
     if (this.layersState[id]) {
-        for (let i = 0; i < this.layerTrees.length; i++) {
-            const stage = this.layerTrees[i];
+        for (let i = 0; i < this.pipelines.length; i++) {
+            const stage = this.pipelines[i];
             if (stage.layer.id === id) {
-                this.layerTrees.splice(i, 1);
+                this.pipelines.splice(i, 1);
                 break;
             }
         }
-        this.traverseLayerTrees((stage) => {
-            for (let i = 0; i < stage.children.length; i++) {
-                if (stage.children[i].layer.id === id) {
-                    stage.children.splice(i, 1);
+        this.traversepipelines((stage) => {
+            for (let i = 0; i < stage.subStages.length; i++) {
+                if (stage.subStages[i].layer.id === id) {
+                    stage.subStages.splice(i, 1);
                 }
             }
         });
@@ -78,14 +78,14 @@ SceneConfiguration.prototype.removeLayer = function removeLayer(id) {
 };
 
 SceneConfiguration.prototype.traverseLayers = function traverseLayers(fn) {
-    for (const stage of this.layerTrees) {
+    for (const stage of this.pipelines) {
         _traverseLayers(fn, stage);
     }
 };
 
-SceneConfiguration.prototype.traverseLayerTrees = function traverseLayerTrees(fn) {
-    for (const stage of this.layerTrees) {
-        _traverseLayerTrees(fn, stage);
+SceneConfiguration.prototype.traversePipelines = function traversepipelines(fn) {
+    for (const pipeline of this.pipelines) {
+        _traversePipeline(fn, pipeline);
     }
 };
 

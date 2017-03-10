@@ -420,11 +420,62 @@ ApiGlobe.prototype.createSceneGlobe = function createSceneGlobe(globeLayerId, co
         });
     };
 
+    // add geom stage
+    geometry = scene.attach(
+        {
+            preUpdate: preGlobeUpdate,
+            update: updateTreeLayer2(
+                initTiledGeometryLayer2(globeSchemeTileWMTS(globeSchemeTile1)),
+                processTiledGeometryNode2(
+                    globeCulling,
+                    globeSubdivisionControl(18),
+                    nodeInitFn)),
+        },
+        {
+            id: globeLayerId,
+            nodeType: TileMesh,
+            builder: new BuilderEllipsoidTile(new Projection()),
+        }
+    );
+
+    // imagery
+    geometry.attach(
+        {
+            update: updateLayeredMaterialNodeImagery,
+        },
+        {
+            id         : 'wms_imagery',
+            url        : "https://download.data.grandlyon.com/wms/grandlyon",
+            protocol   : 'wms',
+            version    : '1.3.0',
+            name       : 'Ortho2009_vue_ensemble_16cm_CC46',
+            projection : 'EPSG:3946',
+            bbox_url   : 'wsen',
+        }
+    );
+
+    // elevation
+    geometry.attach(
+        {
+            update: updateLayeredMaterialNodeImagery,
+        },
+        {
+            id         : 'wms_elevation',
+            url        : "https://download.data.grandlyon.com/wms/grandlyon",
+            protocol   : 'wms',
+            name       : 'MNT2012_Altitude_10m_CC46',
+            projection : 'EPSG:3946',
+            bbox_url   : 'wsen',
+        }
+    );
+
+
+
+
     // init globe layer with default parameter
     const wgs84TileLayer = {
         // layer base options
         protocol: 'tile',
-        id: globeLayerId,
         preUpdate: (context, layer) => preGlobeUpdate(context, layer),
         update: (context, layer, node) => updateTreeLayer(context, layer, node),
         // options for 'tile' protocol
