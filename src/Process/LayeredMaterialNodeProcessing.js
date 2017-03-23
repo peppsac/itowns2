@@ -165,7 +165,7 @@ function _updateLayeredMaterialNodeImagery(context, layer, node, parent, force) 
         earlyDropFunction: force ? null : refinementCommandCancellationFn,
         /* specific params */
         ancestor,
-        redraw: !force,
+        redraw: !force || ancestor === null,
     };
 
     return context.scheduler.execute(command).then(
@@ -292,7 +292,7 @@ function _updateLayeredMaterialNodeElevation(context, layer, node, parent) {
         earlyDropFunction: force ? null : refinementCommandCancellationFn,
         /* specific params */
         ancestor,
-        redraw: !force,
+        redraw: !force || ancestor === null,
     };
 
     return context.scheduler.execute(command).then(

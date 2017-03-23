@@ -48,6 +48,8 @@ function Scene(positionCamera, size, viewerDiv, debugMode, gLDebug) {
     this._geometryLayers = [];
 
     this.nextThreejsLayer = 0;
+
+    this.timers = [];
 }
 
 /**
@@ -99,14 +101,57 @@ Scene.prototype.updateScene3D = function updateScene3D() {
  * needsRedraw param indicates if notified change requires a full scene redraw.
  */
 Scene.prototype.notifyChange = function notifyChange(delay, needsRedraw) {
+    // console.log('notifyChange ', delay, needsRedraw);
     if (delay) {
-        window.setTimeout(() => { this.scheduleUpdate(needsRedraw); }, delay);
+        var nextTimeout = Date.now() + delay;
+
+        // iterate on timer to find a close-enough timer
+        for (const timer of this.timers) {
+            if (Math.abs(timer.timeout - nextTimeout) < 1000) {
+                timer.needsRedraw |= needsRedraw;
+                timer.grouped++;
+                // console.log(`    < filtered`);
+                // TODO could make sense to reschedule at min(timer.timeout, nextTimeout)
+                return;
+            }
+        }
+
+        // failed to find
+        const t = {};
+        t.timeout = nextTimeout;
+        t.needsRedraw = needsRedraw;
+        t.grouped = 0;
+        t.tid = window.setTimeout(() => {
+            console.log(`   > scheduleUpdate ${t.needsRedraw} ${t.grouped}`);
+            // only ask redraw if someone requested it
+            this.scheduleUpdate(t.needsRedraw);
+        }, delay);
+        this.timers.push(t);
     } else {
-        this.scheduleUpdate(needsRedraw);
+        let nextTimersNeedsRedraw = needsRedraw;
+        let n = Date.now();
+
+        let cleared = 0;
+        for (let i=0; i<this.timers.length; i++) {
+            const timer = this.timers[i];
+            if (Math.abs(timer.timeout - n) < 1000) {
+                nextTimersNeedsRedraw |= timer.needsRedraw;
+                window.clearTimeout(timer.tid);
+                timer.tid = undefined;
+                cleared += 1 + timer.grouped;
+            }
+        }
+        this.timers = this.timers.filter(t => t.tid);
+
+        console.log(`   # scheduleUpdate ${needsRedraw} -> ${nextTimersNeedsRedraw} (${cleared})`);
+        this.scheduleUpdate(nextTimersNeedsRedraw);
     }
 };
 
 Scene.prototype.scheduleUpdate = function scheduleUpdate(forceRedraw) {
+    this.nextTimeoutDate = undefined;
+    this.nextTimeoutID = undefined;
+
     this.needsRedraw |= forceRedraw;
 
     if (this.renderingState !== RENDERING_ACTIVE) {
@@ -197,7 +242,7 @@ Scene.prototype.step = function step() {
         // update rendering
         if ((1000.0 / this.maxFramePerSec) < (ts - this.lastRenderTime)) {
             // only perform rendering if needed
-            if (this.needsRedraw || executedDuringUpdate > 0) {
+            if (this.needsRedraw) {
                 this.renderScene3D();
                 this.lastRenderTime = ts;
             }
@@ -210,6 +255,7 @@ Scene.prototype.step = function step() {
 /**
  */
 Scene.prototype.renderScene3D = function renderScene3D() {
+    // console.log('render!');
     this.gfxEngine.renderScene();
     this.needsRedraw = false;
 };

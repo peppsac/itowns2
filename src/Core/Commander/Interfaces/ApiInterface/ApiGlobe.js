@@ -660,7 +660,7 @@ ApiGlobe.prototype.setTilt = function setTilt(tilt, isAnimated) {
     eventOrientation.oldTilt = this.getTilt();
     return this.scene.currentControls().setTilt(tilt, isAnimated).then(() => {
         this.viewerDiv.dispatchEvent(eventOrientation);
-        this.scene.notifyChange(1);
+        this.scene.notifyChange(1, true);
     });
 };
 
@@ -677,7 +677,7 @@ ApiGlobe.prototype.setHeading = function setHeading(heading, isAnimated) {
     eventOrientation.oldHeading = this.getHeading();
     return this.scene.currentControls().setHeading(heading, isAnimated).then(() => {
         this.viewerDiv.dispatchEvent(eventOrientation);
-        this.scene.notifyChange(1);
+        this.scene.notifyChange(1, true);
     });
 };
 
@@ -732,7 +732,7 @@ ApiGlobe.prototype.setCenter = function setCenter(coordinates, isAnimated) {
         .as('EPSG:4978').xyz();
     position3D.range = coordinates.range;
     return this.scene.currentControls().setCenter(position3D, isAnimated).then(() => {
-        this.scene.notifyChange(1);
+        this.scene.notifyChange(1, true);
         return this.setSceneLoaded().then(() => {
             this.scene.currentControls().updateCameraTransformation();
             this.viewerDiv.dispatchEvent(eventCenter);
@@ -772,7 +772,7 @@ ApiGlobe.prototype.setRange = function setRange(pRange, isAnimated) {
     eventRange.oldRange = this.getRange();
 
     return this.scene.currentControls().setRange(pRange, isAnimated).then(() => {
-        this.scene.notifyChange(1);
+        this.scene.notifyChange(1, true);
         this.setSceneLoaded().then(() => {
             this.scene.currentControls().updateCameraTransformation();
             this.viewerDiv.dispatchEvent(eventRange);
@@ -788,7 +788,7 @@ ApiGlobe.prototype.setRange = function setRange(pRange, isAnimated) {
  */
 ApiGlobe.prototype.pan = function pan(pVector) {
     this.scene.currentControls().pan(pVector.x, pVector.y);
-    this.scene.notifyChange(1);
+    this.scene.notifyChange(1, true);
     this.setSceneLoaded().then(() => {
         this.scene.currentControls().updateCameraTransformation();
         this.viewerDiv.dispatchEvent(eventPan);
