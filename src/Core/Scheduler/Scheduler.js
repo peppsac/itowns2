@@ -8,6 +8,7 @@ import PriorityQueue from 'js-priority-queue';
 import WMTS_Provider from './Providers/WMTS_Provider';
 import WMS_Provider from './Providers/WMS_Provider';
 import TileProvider from './Providers/TileProvider';
+import PointCloudProvider from './Providers/PointCloudProvider';
 
 var instanceScheduler = null;
 
@@ -83,6 +84,7 @@ Scheduler.prototype.initDefaultProviders = function initDefaultProviders() {
     this.addProtocolProvider('wmtsc', wmtsProvider);
     this.addProtocolProvider('tile', new TileProvider());
     this.addProtocolProvider('wms', new WMS_Provider());
+    this.addProtocolProvider('pointcloud', new PointCloudProvider());
 };
 
 

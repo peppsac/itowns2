@@ -262,6 +262,9 @@ function Debug(view, viewerDiv) {
 
         // obb layer update
         for (const gLayer of view._layers) {
+            if (gLayer.protocol != 'tile') {
+                continue;
+            }
             const obbLayerAlreadyAdded =
                 view.getLayers(
                     (a, l) => l && l.id == gLayer.id && a.id.indexOf('_obb_debug') >= 0).length > 0;

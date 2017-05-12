@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <title>Lyon (plane mode)</title>
+
+    <style type="text/css">
+            html {height: 100%}
+        body { margin: 0; overflow:hidden; height:100%}
+
+            #viewerDiv {
+                margin : auto auto;
+                width: 100%;
+                height: 100%;
+                padding: 0;
+                /*margin-top: 50vh;
+                transform: translateY(-50%);*/
+            }
+            #menuDiv {position: absolute; top:0px; margin-left: 0px;}
+            #info {
+                color: #fff;
+                position: absolute;
+                top: 0px;
+                right: 0px;
+                padding: 5px;
+                z-index: 100;
+
+                z-index: 100;
+                background-color: rgba(0, 0, 0, 0.2);
+                border: 2px solid black;
+                border-radius: 5px;
+            }
+
+            .ytp-button {
+                position: absolute;
+                top: 0px;
+                right: 0px;
+               outline: none;
+               border: 0px solid;
+               background: transparent;
+            }
+
+            .ytp-play-button {
+               fill: #fff;
+               opacity: 0.85;
+            }
+
+            .ytp-play-button:hover {
+               cursor: pointer;
+               opacity: 1;
+            }
+
+
+            #splat {
+
+                position: absolute;
+            }
+
+        </style>
+        <meta charset="UTF-8">
+
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.6.1/dat.gui.min.js"></script>
+    </head>
+    <body>
+        <div id="viewerDiv"></div>
+        <div id="info">
+
+        </div>
+        <div id="splat"></div>
+        <button class="ytp-play-button ytp-button" id="play-button" tabindex="32">
+           <svg width="100%" height="100%" viewBox="0 0 36 36" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+              <defs>
+                 <path id="ytp-12" d="M 11 10 L 17 10 L 17 26 L 11 26 M 20 10 L 26 10 L 26 26 L 20 26">
+                    <animate id="animation" begin="indefinite" attributeType="XML" attributeName="d" fill="freeze" from="M11,10 L17,10 17,26 11,26 M20,10 L26,10 26,26 20,26" to="M11,10 L18,13.74 18,22.28 11,26 M18,13.74 L26,18 26,18 18,22.28" dur="0.1s" keySplines=".4 0 1 1"
+                    repeatCount="1"></animate>
+                 </path>
+              </defs>
+              <use xlink:href="#ytp-12" class="ytp-svg-shadow"></use>
+              <use xlink:href="#ytp-12" class="ytp-svg-fill"></use>
+           </svg>
+        </button>
+
+        <script src="/examples/GUI/GuiTools.js"></script>
+        <script src="/dist/itowns.js"></script>
+        <script src="/dist/debug.js"></script>
+        <script type="text/javascript">
+
+            /* global itowns,document,GuiTools*/
+            const viewerDiv = document.getElementById('viewerDiv');
+
+            itowns.proj4.defs('EPSG:3946',
+                '+proj=lcc +lat_1=45.25 +lat_2=46.75 +lat_0=46 +lon_0=3 +x_0=1700000 +y_0=5200000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs');
+
+            const menuGlobe = new GuiTools(itowns.viewer, 'menuDiv');
+
+            const bbox = new itowns.Extent(
+                'EPSG:3946',
+                1837816.94334, 1847692.32501,
+                5170036.4587, 5178412.82698);
+
+            var view = new itowns.PlanarView(viewerDiv, bbox);
+            view.tileLayer.materialOptions = {
+                useColorTextureElevation: true,
+                // colorTextureElevationMinZ: 148,
+                colorTextureElevationMinZ: 26,
+                colorTextureElevationMaxZ: 240,
+            };
+            view.tileLayer.disableSkirt = true;
+
+            view.addLayer({
+                url       : "https://download.data.grandlyon.com/wms/grandlyon",
+                type      : "color",
+                protocol  : 'wms',
+                version   : '1.3.0',
+                id        : 'wms_imagery',
+                name      : 'Ortho2009_vue_ensemble_16cm_CC46',
+                style      : "",
+                projection : "EPSG:3946",
+                transparent : false,
+                bbox      : [bbox.west(), bbox.east(), bbox.south(), bbox.north()],
+                bbox_url  : "wsen",
+                featureInfoMimeType : "",
+                dateTime  : "",
+                heightMapWidth : 256,
+                waterMask      : false,
+                updateStrategy: {
+                    type: 0,
+                    options: {}
+                },
+                options: {
+                    mimetype  : "image/jpeg"
+                }
+            });
+
+            view.addLayer({
+                url       : "https://download.data.grandlyon.com/wms/grandlyon",
+                type      : "elevation",
+                protocol  : 'wms',
+                version   : '1.3.0',
+                id        : 'wms_elevation',
+                name      : 'MNT2012_Altitude_10m_CC46',
+                style      : "",
+                projection : "EPSG:3946",
+                transparent : false,
+                bbox      : [bbox.west(), bbox.east(), bbox.south(), bbox.north()],
+                bbox_url  : "wsen",
+                featureInfoMimeType : "",
+                dateTime  : "",
+                heightMapWidth : 256,
+                waterMask      : false,
+                options: {
+                    minmaxElevation: [0, 255],
+                    mimetype  : "image/jpeg"
+                }
+            });
+
+            var animationEnabled = true;
+
+            let previous = Date.now();
+            let dt = 0;
+            function moveCamera() {
+                const now = Date.now();
+                dt += now - previous;
+                var t = dt / 3000;
+                previous = now;
+
+                var radius = Math.min(bbox.dimensions().x, bbox.dimensions().y) / 3;
+
+                const center = bbox.center().xyz();
+                var x = center.x + Math.cos(t) * radius;
+                var y = center.y + Math.sin(t) * radius;
+
+                const c2 = new itowns.Coordinates('EPSG:3946', 1842500, 5175500, 0);
+                view.camera.camera3D.position.set(x, y, 1000 + Math.sin(t) * 100);
+                view.camera.camera3D.lookAt(c2.xyz());
+                view.camera.camera3D.updateMatrix();
+                view.camera.camera3D.updateMatrixWorld(true);
+
+                view.notifyChange(20, true);
+            }
+
+            view.onAfterRender = () => {
+                if (animationEnabled) {
+                    moveCamera();
+                }
+            };
+            moveCamera();
+
+            // point cloud
+            const use_brotli = (window.location.search.indexOf('brotli=1') >= 0);
+            const show_bbox = (window.location.search.indexOf('bbox=1') >= 0);
+            const custom_bin_format = !(window.location.search.indexOf('custom_bin=0') >= 0);
+            const path = window.location.href.substr(0, window.location.href.lastIndexOf('/'));
+            const file = custom_bin_format ? 'cloud_custombin.js' : 'cloud.js';
+
+            const bboxcolor = [0xeeee00, 0x33ddaa];
+
+            let index = 0;
+            for (const url of [`${path}/../dist/1843_5176`, `${path}/../dist/1842_5177`, `${path}/../dist/1843_5175`, `${path}/../dist/1843_5177`, `${path}/../dist/1842_5176`, `${path}/../dist/1844_5175`, `${path}/../dist/1844_5176`, `${path}/../dist/1842_5175`]) {
+                let pointCount = 0;
+                const info = document.createElement('span');
+                document.getElementById('info').appendChild(info);
+                document.getElementById('info').appendChild(document.createElement('br'));
+
+
+                const pointcloud = new itowns.GeometryLayer('pointcloud');
+                pointcloud.file = file;
+                pointcloud.customBinFormat = custom_bin_format;
+                pointcloud.protocol = 'pointcloud';
+                pointcloud.url = url;
+                pointcloud.useBrotli = use_brotli;
+                pointcloud.index = index;
+                index++;
+
+                pointcloud.preUpdate = (context, layer) => {
+                    pointCount = 0;
+                    if (layer.root) {
+                        return [layer.root];
+                    } else {
+                        return [];
+                    }
+                };
+                pointcloud.update = (context, layer, elt) => {
+                    // quick and dirty lod
+                    const dist = elt.bbox.distanceToPoint(context.camera.camera3D.position);
+                    const lod = elt.name.length;
+                    let shouldBeLoaded = false;
+
+                    const cl = (elt.obj ? elt.obj.tightbbox : elt.bbox).clone();
+                    const m = new itowns.THREE.Matrix4().setPosition(cl.min);
+                    cl.translate(cl.min.clone().negate());
+                    const visible = context.camera.isBox3DVisible(cl, m);
+
+                    // const splat = document.getElementById('splat');
+
+                    if (visible) {
+                        const onScreen = context.camera.box3DSizeOnScreen(cl, m);
+
+                        const numPoints = elt.numPoints || elt.n;
+
+                        var width = (onScreen.max.x - onScreen.min.x) * context.camera.width;
+                        var height = (onScreen.max.y - onScreen.min.y) * context.camera.height;
+                        // so
+                        const surfaceOnScreen = width * height;
+                        const density = numPoints ? numPoints / surfaceOnScreen : 10000;
+                        shouldBeLoaded = density <= 0.1 || lod == 0;
+
+                        if (elt.name == '0' && elt.baseurl == "http://localhost:8080/examples/../dist/1843_5175/data/r") {
+                            // splat.style.bottom = `${50 * (onScreen.min.y + 1)}%`;
+                            // splat.style.top = `${100 - 50 * (onScreen.max.y + 1)}%`
+                            // splat.style.left = `${50 * (onScreen.min.x + 1)}%`; //'20%';
+                            // splat.style.right = `${100 - 50 * (onScreen.max.x + 1)}%`; //'20%';
+                            // splat.style['background-color'] = 'rgba(255, 0, 0, 0.25)';
+                            if (elt.bboxHelper) {
+                                elt.bboxHelper.material.color = new itowns.THREE.Color(1, 0, 0);
+                            }
+                        }
+                    }
+
+                    if (shouldBeLoaded) {
+                        if (elt.obj) {
+                            elt.obj.material.visible = visible;
+                            if (visible) {
+                                pointCount += elt.obj.realPointCount;
+                                info.textContent = `Nb points: ${pointCount}`;
+                            }
+                        } else {
+                            if (visible) {
+                                context.scheduler.execute({
+                                    layer,
+                                    requester: elt,
+                                    view,
+                                    redraw: true,
+                                }).then((pts) => {
+                                    elt.obj = pts;
+                                    context.view.scene.add(pts);
+
+                                    if (show_bbox) {
+                                        // const b = new itowns.THREE.BoxHelper(elt.bbox, bboxcolor[pointcloud.index]);
+                                        // b.frustumCulled = false;
+                                        // b.layers.set(view.tileLayer.threejsLayer);
+                                        // context.view.scene.add(b);
+                                        // elt.bboxHelper = b;
+
+                                        const b2 = new itowns.THREE.BoxHelper(pts.tightbbox, bboxcolor[pointcloud.index]);
+                                        b2.material.linewidth *= 3;
+                                        b2.frustumCulled = false;
+                                        b2.layers.set(pointcloud.threejsLayer);
+                                        context.view.scene.add(b2);
+                                        elt.bboxHelper = b2;
+                                    }
+                                });
+                            }
+                        }
+                    } else {
+                        if (!visible) {
+                            if (elt.obj) {
+                                context.view.scene.remove(elt.obj);
+                                if (elt.bboxHelper) {
+                                    context.view.scene.remove(elt.bboxHelper);
+                                    elt.bboxHelper = null;
+                                }
+                                elt.obj.geometry.dispose();
+                            }
+                            elt.obj = null;
+                        } else if (elt.obj) {
+                            elt.obj.material.visible = false;
+                            if (elt.bboxHelper) {
+                                elt.bboxHelper.material.visible = false;
+                            }
+                        }
+                    }
+
+                    if (elt.children && elt.children.length) {
+                        return elt.children;
+                    }
+                    return undefined;
+                };
+                itowns.View.prototype.addLayer.call(view, pointcloud);
+            }
+
+            view.notifyChange(0, true);
+
+            // play-pause button from https://codepen.io/mistkaes/pen/WvPrJL
+            pause = "M11,10 L18,13.74 18,22.28 11,26 M18,13.74 L26,18 26,18 18,22.28",
+            play = "M11,10 L17,10 17,26 11,26 M20,10 L26,10 26,26 20,26",
+            animation = document.getElementById('animation');
+
+            document.getElementById("play-button").addEventListener('click', function() {
+                animationEnabled = !animationEnabled;
+                animation.setAttribute("from", animationEnabled ? pause : play);
+                animation.setAttribute("to", animationEnabled ? play : pause);
+                animation.beginElement();
+                if (animationEnabled) {
+                    view.notifyChange(0, true);
+                    previous = Date.now();
+                }
+            });
+
+        </script>
+    </body>
+</html>
