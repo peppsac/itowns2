@@ -329,6 +329,7 @@ function addGeometryLayerDebugFeatures(layer, view, gui, state) {
             }
 
             n.setMaterialVisibility(true);
+            n.update(node.OBB());
         } else if (n.length > 0) {
             n[0].setMaterialVisibility(false);
         }
