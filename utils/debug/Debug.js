@@ -45,15 +45,14 @@ function Debug(view, viewerDiv) {
     rightChart.appendChild(nbVisibleCanvas);
 
     const timestamp = Date.now();
-    const nbObjectsDataset = { label: 'Number of objects in Scene', data: [{ x: 0, y: 0 }] };
-    const nbVisibleDataset = { label: 'Number of visible objects in Scene', data: [{ x: 0, y: 0 }], borderColor: 'rgba(75,192,192,1)' };
-    const nbDisplayedDataset = { label: 'Number of displayed objects in Scene', data: [{ x: 0, y: 0 }], borderColor: 'rgba(153, 102, 255, 1)' };
+    const nbObjectsDataset = { label: 'Update 1st level', data: [{ x: 0, y: 0 }] };
+    const nbVisibleDataset = { label: 'Update duration (ms)', data: [{ x: 0, y: 0 }], borderColor: 'rgba(75,192,192,1)' };
     const nbObjectsChartLabel = ['0s'];
     const nbObjectsChart = new Chart('nb-objects', {
         type: 'line',
         data: {
             labels: nbObjectsChartLabel,
-            datasets: [nbObjectsDataset, nbVisibleDataset, nbDisplayedDataset],
+            datasets: [nbObjectsDataset, nbVisibleDataset],
         },
         options: {
             animation: { duration: 10 },
@@ -99,20 +98,7 @@ function Debug(view, viewerDiv) {
         },
     });
 
-    function debugChartUpdate() {
-        function countElem(node) {
-            if (!node) {
-                return 0;
-            }
-            let count = 1; // this node
-            if (node.children) {
-                for (const child of node.children) {
-                    count += countElem(child);
-                }
-            }
-            return count;
-        }
-
+    function debugChartUpdate(updateStartLevel, updateDuration) {
         function countVisible(node, stats) {
             if (!node || !node.visible) {
                 return;
@@ -137,8 +123,6 @@ function Debug(view, viewerDiv) {
         // update bar graph
         const stats = {};
         countVisible(view.mainLoop.gfxEngine.scene3D, stats);
-        let totalVisible = 0;
-        let totalDisplayed = 0;
         nbVisibleLabels.length = 0;
         nbVisibleData.length = 0;
         for (const level in stats) {
@@ -146,45 +130,40 @@ function Debug(view, viewerDiv) {
                 nbVisibleLabels[level - 1] = `${level}`;
                 nbVisibleData[level - 1] = stats[level][0];
                 nbDisplayedData[level - 1] = stats[level][1];
-                totalVisible += stats[level][0];
-                totalDisplayed += stats[level][1];
             }
         }
 
 
         // update line graph
-        const newCount = countElem(view.mainLoop.gfxEngine.scene3D);
 
+
+/*
         // test if we values didn't change
         if (nbObjectsDataset.data.length > 1) {
             const last = nbObjectsDataset.data.length - 1;
-            if (nbObjectsDataset.data[last].y === newCount &&
-                nbVisibleDataset.data[last].y === totalVisible &&
-                nbDisplayedDataset.data[last].y === totalDisplayed) {
+            if (nbObjectsDataset.data[last].y === updateStartLevel &&
+                nbVisibleDataset.data[last].y === updateDuration) {
                 // nothing change: drop the last point, to keep more interesting (changing)
                 // data displayed
                 nbObjectsDataset.data.pop();
                 nbVisibleDataset.data.pop();
-                nbDisplayedDataset.data.pop();
                 nbObjectsChartLabel.pop();
             }
         }
-
+*/
         // update time
-        const limit = 25;
+        const limit = 60;
         const timeInS = Math.floor((Date.now() - timestamp) / 1000);
         nbObjectsChartLabel.push(`${timeInS}s`);
         if (nbObjectsChartLabel.length > limit) {
             nbObjectsChartLabel.shift();
         }
 
-        nbObjectsDataset.data.push({ x: timeInS, y: newCount });
-        nbVisibleDataset.data.push({ x: timeInS, y: totalVisible });
-        nbDisplayedDataset.data.push({ x: timeInS, y: totalDisplayed });
+        nbObjectsDataset.data.push({ x: timeInS, y: updateStartLevel });
+        nbVisibleDataset.data.push({ x: timeInS, y: updateDuration });
         if (nbObjectsDataset.data.length > limit) {
             nbObjectsDataset.data.shift();
             nbVisibleDataset.data.shift();
-            nbDisplayedDataset.data.shift();
         }
 
         if (chartDiv.style.display != 'none') {
@@ -280,11 +259,14 @@ function Debug(view, viewerDiv) {
     // hook that to scene.update
     const ml = view.mainLoop;
     const oldUpdate = Object.getPrototypeOf(ml)._update.bind(ml);
-    ml._update = function debugUpdate(view) {
+    ml._update = function debugUpdate(view, ...args) {
         // regular itowns update
-        oldUpdate(view);
+        const before = Date.now();
+        oldUpdate(view, ...args);
+        const duration = Date.now() - before;
         // debug graphs update
-        debugChartUpdate();
+        debugChartUpdate(view._latestUpdateStartingLevel, duration);
+
         // obb layer update
         for (const gLayer of view._layers) {
             const obbLayerAlreadyAdded =

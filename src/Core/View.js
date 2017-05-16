@@ -132,11 +132,11 @@ View.prototype.currentCamera = function currentCamera() {
  * non-interactive events (e.g: texture loaded)
  * needsRedraw param indicates if notified change requires a full scene redraw.
  */
-View.prototype.notifyChange = function notifyChange(delay, needsRedraw) {
+View.prototype.notifyChange = function notifyChange(delay, needsRedraw, changeSource) {
     if (delay) {
-        window.setTimeout(() => { this.mainLoop.scheduleViewUpdate(this, needsRedraw); }, delay);
+        window.setTimeout(() => { this.mainLoop.scheduleViewUpdate(this, needsRedraw, changeSource); }, delay);
     } else {
-        this.mainLoop.scheduleViewUpdate(this, needsRedraw);
+        this.mainLoop.scheduleViewUpdate(this, needsRedraw, changeSource);
     }
 };
 

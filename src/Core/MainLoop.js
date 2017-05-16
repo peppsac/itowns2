@@ -8,10 +8,12 @@ function MainLoop(scheduler, engine) {
     this.gfxEngine = engine; // TODO: remove me
 
     this._viewsToUpdate = new Set();
+    this.changeSources = new Set();
 }
 
-MainLoop.prototype.scheduleViewUpdate = function scheduleViewUpdate(view, forceRedraw) {
+MainLoop.prototype.scheduleViewUpdate = function scheduleViewUpdate(view, forceRedraw, changeSource) {
     this.needsRedraw |= forceRedraw;
+    this.changeSources.add(changeSource);
 
     if (this.renderingState !== RENDERING_ACTIVE) {
         this.renderingState = RENDERING_ACTIVE;
@@ -39,7 +41,7 @@ function updateElements(context, geometryLayer, elements) {
     }
 }
 
-MainLoop.prototype._update = function _update(view) {
+MainLoop.prototype._update = function _update(view, changeSources) {
     const context = {
         camera: view.camera,
         engine: this.gfxEngine,
@@ -49,7 +51,7 @@ MainLoop.prototype._update = function _update(view) {
 
     for (const geometryLayer of view.getLayers((x, y) => !y)) {
         context.geometryLayer = geometryLayer;
-        const elementsToUpdate = geometryLayer.preUpdate(context, geometryLayer);
+        const elementsToUpdate = geometryLayer.preUpdate(context, geometryLayer, changeSources);
         updateElements(context, geometryLayer, elementsToUpdate);
     }
 };
@@ -57,7 +59,7 @@ MainLoop.prototype._update = function _update(view) {
 MainLoop.prototype._step = function _step(view) {
     // update data-structure
     const executedDuringUpdate = this.scheduler.resetCommandsCount('executed');
-    this._update(view);
+    this._update(view, this.changeSources);
 
 
     if (this.scheduler.commandsWaitingExecutionCount() == 0 && executedDuringUpdate == 0) {
@@ -79,6 +81,7 @@ MainLoop.prototype._step = function _step(view) {
         document.title = document.title.substr(0, document.title.length - 2);
     }
     this.renderingState = RENDERING_PAUSED;
+    this.changeSources.clear();
 };
 
 /**
