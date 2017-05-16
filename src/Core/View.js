@@ -49,6 +49,7 @@ function View(crs, viewerDiv, mainLoop) {
     window.addEventListener('resize', () => {
         this.mainLoop.gfxEngine.onWindowResize();
         this.camera.resize(this.viewerDiv.clientWidth, this.viewerDiv.clientHeight);
+        this.camera.update();
         this.notifyChange(0, true);
     }, false);
 

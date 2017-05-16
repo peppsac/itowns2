@@ -3,12 +3,9 @@ const RENDERING_ACTIVE = 1;
 
 function MainLoop(scheduler, engine) {
     this.renderingState = RENDERING_PAUSED;
+    this.needsRedraw = false;
     this.scheduler = scheduler;
     this.gfxEngine = engine; // TODO: remove me
-
-    this.needsRedraw = false;
-    this.lastRenderTime = 0;
-    this.maxFramePerSec = 60;
 
     this._viewsToUpdate = new Set();
 }
@@ -62,36 +59,26 @@ MainLoop.prototype._step = function _step(view) {
     const executedDuringUpdate = this.scheduler.resetCommandsCount('executed');
     this._update(view);
 
-    // Check if we're done (no command left).
-    // We need to make sure we didn't executed any commands because these commands
-    // might spawn other commands in a next update turn.
+
     if (this.scheduler.commandsWaitingExecutionCount() == 0 && executedDuringUpdate == 0) {
         // TODO per view
         // this.viewerDiv.dispatchEvent(new CustomEvent('globe-built'));
-
-        // one last rendering before pausing
-        this._renderView(view);
-
-        // reset rendering flag
-        this.renderingState = RENDERING_PAUSED;
-
-        if (__DEBUG__) {
-            document.title = document.title.substr(0, document.title.length - 2);
-        }
-    } else {
-        const ts = Date.now();
-
-        // update rendering
-        if ((1000.0 / this.maxFramePerSec) < (ts - this.lastRenderTime)) {
-            // only perform rendering if needed
-            if (this.needsRedraw) {
-                this._renderView(view);
-                this.lastRenderTime = ts;
-            }
-        }
-
-        requestAnimationFrame(() => { this._step(view); });
     }
+
+    // Redraw *only* if needed.
+    // (redraws only happen when this.needsRedraw is true, which in turn only happens when
+    // view.notifyChange() is called with redraw=true)
+    // As such there's no continuous update-loop, instead we use a ad-hoc update/render
+    // mechanism.
+    if (this.needsRedraw) {
+        this._renderView(view);
+        this.needsRedraw = false;
+    }
+
+    if (__DEBUG__) {
+        document.title = document.title.substr(0, document.title.length - 2);
+    }
+    this.renderingState = RENDERING_PAUSED;
 };
 
 /**
