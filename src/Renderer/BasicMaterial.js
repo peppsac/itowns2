@@ -38,6 +38,11 @@ function BasicMaterial(color) {
     }
 
     this.fragmentShaderHeader += '#define VERTEX_TEXTURES\n';
+
+    if (__DEBUG__) {
+        this.fragmentShaderHeader += '#define DEBUG\n';
+    }
+
     this.vertexShaderHeader = this.fragmentShaderHeader;
 
     this.vertexShader = this.vertexShaderHeader + SimpleVS;

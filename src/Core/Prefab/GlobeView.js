@@ -220,6 +220,21 @@ GlobeView.prototype.selectNodeAt = function selectNodeAt(mouse) {
                 if (node.id === selectedId) {
                     // eslint-disable-next-line no-console
                     console.info(node);
+
+                    const container = document.getElementById('canvasDebug');
+                    while(container.firstChild) container.removeChild(container.firstChild);
+
+                    for (const layer of node.materials[0].colorLayersId) {
+                        const index = node.materials[0].indexOfColorLayer(layer);
+                        const texture = node.materials[0].uniforms.atlasTextures.value[index]
+                        const canvas = texture.image;
+                        for (const txt of [`${layer}`, `${texture.uv.length} images`, `${canvas.width}x${canvas.height}`]) {
+                            const s = document.createElement('div');
+                            s.textContent = txt;
+                            container.appendChild(s);s
+                        }
+                        container.appendChild(canvas);
+                    }
                 }
             }
         });

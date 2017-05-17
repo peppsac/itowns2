@@ -5,7 +5,6 @@ import IoDriver_XBIL from './IoDriver_XBIL';
 import Projection from '../../Geographic/Projection';
 import Extent from '../../Geographic/Extent';
 
-
 export const SIZE_TEXTURE_TILE = 256;
 
 // CacheRessource is necessary for neighboring PM textures
@@ -31,19 +30,27 @@ export default {
             return Promise.resolve(cachedTexture);
         }
 
-        const { texture, promise } = Fetcher.texture(url);
-
-        texture.generateMipmaps = false;
-        texture.magFilter = THREE.LinearFilter;
-        texture.minFilter = THREE.LinearFilter;
-        texture.anisotropy = 16;
-
-        return promise.then(() => {
+        return Fetcher.texture(url).then((texture) => {
             if (!cache.getRessource(url)) {
                 cache.addRessource(url, texture);
             }
             return texture;
         });
+
+
+        // const { texture, promise } = Fetcher.texture(url);
+
+        // texture.generateMipmaps = false;
+        // texture.magFilter = THREE.LinearFilter;
+        // texture.minFilter = THREE.LinearFilter;
+        // texture.anisotropy = 16;
+
+        // return promise.then(() => {
+        //     if (!cache.getRessource(url)) {
+        //         cache.addRessource(url, texture);
+        //     }
+        //     return texture;
+        // });
     },
     getXBilTextureByUrl(url) {
         const textureCache = cache.getRessource(url);

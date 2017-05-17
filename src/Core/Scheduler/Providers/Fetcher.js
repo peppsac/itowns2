@@ -29,6 +29,18 @@ export default {
     },
 
     texture(url) {
+        return new Promise((resolve, reject) => {
+            var image = new Image();
+
+            image.onload = () => resolve(image);
+
+            image.onerror = () => reject(new Error(`Error loading ${url}`));
+
+            image.crossOrigin = '';
+            image.src = url;
+        });
+
+        /*
         let res;
         let rej;
         const promise = new Promise((resolve, reject) => {
@@ -38,5 +50,6 @@ export default {
 
         const texture = textureLoader.load(url, res, () => {}, rej);
         return { texture, promise };
+        */
     },
 };

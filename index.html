@@ -21,6 +21,20 @@ and open the template in the editor.
             #menuDiv {position: absolute; top:0px; margin-left: 0px;}
 
 
+            #canvasDebug {
+                position: absolute;
+                top: 0;
+                right: 0px;
+                height: 100%;
+                width: 10%;
+            }
+
+            #canvasDebug > canvas {
+                height: 10%;
+                border-width: 3px 0;
+                border-style:solid;
+                border-color: black;
+            }
         </style>
         <meta charset="UTF-8">
 
@@ -28,6 +42,7 @@ and open the template in the editor.
         <script src="node_modules/dat.gui/build/dat.gui.min.js"></script>
     </head>
     <body>
+        <div id="canvasDebug" style="background-color: white;"></div>
         <div id="viewerDiv"></div>
         <script src="examples/GUI/GuiTools.js"></script>
         <script src="dist/itowns.js"></script>

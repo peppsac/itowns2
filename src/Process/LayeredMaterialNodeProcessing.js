@@ -11,13 +11,32 @@ function initNodeImageryTexturesFromParent(node, parent, layer) {
         const coords = node.getCoordsForLayer(layer);
         const offsetTextures = node.material.getLayerTextureOffset(layer.id);
 
+        const indexInNode = node.material.indexOfColorLayer(layer.id);
+        const indexInParent = parent.material.indexOfColorLayer(layer.id);
+        const offsetInParent = parent.material.getLayerTextureOffset(layer.id);
         let textureIndex = offsetTextures;
+
+        const atlas = parent.material.uniforms.atlasTextures.value[indexInParent];
         for (const c of coords) {
-            for (const texture of parent.materials[0].getLayerTextures(l_COLOR, layer.id)) {
-                if (c.isInside(texture.coords)) {
-                    const result = c.offsetToParent(texture.coords);
-                    node.material.textures[l_COLOR][textureIndex] = texture;
-                    node.material.offsetScale[l_COLOR][textureIndex] = result;
+            for (let i=0; i<atlas.coords.length; i++) {
+                const parentCoords = atlas.coords[i];
+
+                if (c.isInside(parentCoords)) {
+                    const result = c.offsetToParent(parentCoords);
+
+                    const p =
+                        atlas.uv[i].clone();
+
+                    node.material.uniforms.offsetScaleAtlas.value[textureIndex] = p;
+
+                    node.material.uniforms.offsetScaleAtlas.value[textureIndex].x +=
+                        result.x * p.z;
+                    node.material.uniforms.offsetScaleAtlas.value[textureIndex].y +=
+                        result.y * p.w;
+
+                    node.material.uniforms.offsetScaleAtlas.value[textureIndex].z *= result.z;
+                    node.material.uniforms.offsetScaleAtlas.value[textureIndex].w *= result.z;
+
                     textureIndex++;
                     break;
                 }
@@ -31,8 +50,7 @@ function initNodeImageryTexturesFromParent(node, parent, layer) {
                 /* eslint-enable */
             }
         }
-        const index = node.material.indexOfColorLayer(layer.id);
-        node.material.layerTexturesCount[index] = coords.length;
+        node.material.uniforms.atlasTextures.value[indexInNode] = atlas;
         node.material.loadedTexturesCount[l_COLOR] += coords.length;
     }
 }
@@ -53,7 +71,7 @@ function initNodeElevationTextureFromParent(node, parent, layer) {
         // extract min-max from the texture (too few information), we instead chose
         // to use parent's min-max.
         const useMinMaxFromParent = node.level - texture.coords.zoom > 6;
-        if (!useMinMaxFromParent) {
+        if (!useMinMaxFromParent && layer.options.mimetype.indexOf('x-bil') > 0) {
             const { min, max } = OGCWebServiceHelper.ioDXBIL.computeMinMaxElevation(
                 texture.image.data,
                 SIZE_TEXTURE_TILE, SIZE_TEXTURE_TILE,
@@ -107,8 +125,9 @@ export function updateLayeredMaterialNodeImagery(context, layer, node) {
     }
 
     const material = node.materials[RendererConstant.FINAL];
+    const index = material.indexOfColorLayer(layer.id);
 
-    if (material.indexOfColorLayer(layer.id) === -1) {
+    if (index === -1) {
         const texturesCount = layer.tileTextureCount ?
             layer.tileTextureCount(node, layer) : 1;
 
@@ -138,9 +157,8 @@ export function updateLayeredMaterialNodeImagery(context, layer, node) {
     }
 
     // upate params
-    const layerIndex = material.indexOfColorLayer(layer.id);
-    material.setLayerVisibility(layerIndex, layer.visible);
-    material.setLayerOpacity(layerIndex, layer.opacity);
+    material.setLayerVisibility(index, layer.visible);
+    material.setLayerOpacity(index, layer.opacity);
 
     const ts = Date.now();
 
@@ -156,6 +174,7 @@ export function updateLayeredMaterialNodeImagery(context, layer, node) {
     if (!node.isColorLayerDownscaled(layer)) {
         return Promise.resolve();
     }
+
     // is fetching data from this layer disabled?
     if (!layer.visible || layer.frozen) {
         return Promise.resolve();
