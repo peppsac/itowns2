@@ -9,12 +9,16 @@
 import * as THREE from 'three';
 import Capabilities from '../Core/System/Capabilities';
 
-function c3DEngine(viewerDiv) {
+function c3DEngine(viewerDiv, scene3D) {
     var NOIE = !Capabilities.isInternetExplorer();
     this.viewerDiv = viewerDiv;
 
-    this.scene3D = new THREE.Scene();
-    this.scene3D.autoUpdate = false;
+    if (scene3D) {
+        this.scene3D = scene3D;
+    } else {
+        this.scene3D = new THREE.Scene();
+        this.scene3D.autoUpdate = false;
+    }
 
     this.width = viewerDiv.clientWidth;
     this.height = viewerDiv.clientHeight;

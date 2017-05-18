@@ -27,10 +27,10 @@ import Debug from '../../utils/debug/Debug';
  * - remove debug boolean, replace by if __DEBUG__ and checkboxes in debug UI
  * - Scene (and subobjects) should be instanciable several times.
  */
-function View(crs, viewerDiv, mainLoop) {
+function View(crs, viewerDiv, mainLoop, scene3D) {
     this.referenceCrs = crs;
 
-    this.mainLoop = mainLoop || new MainLoop(new Scheduler(), new c3DEngine(viewerDiv));
+    this.mainLoop = mainLoop || new MainLoop(new Scheduler(), new c3DEngine(viewerDiv, scene3D));
 
     this.camera = new Camera(
         viewerDiv.clientWidth,
