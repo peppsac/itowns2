@@ -53,6 +53,8 @@ function initNodeImageryTexturesFromParent(node, parent, layer) {
         node.material.uniforms.atlasTextures.value[indexInNode] = atlas;
         node.material.loadedTexturesCount[l_COLOR] += coords.length;
     }
+
+    node.layersTransition = node.layersTransition || {};
 }
 
 function initNodeElevationTextureFromParent(node, parent, layer) {
@@ -149,7 +151,25 @@ export function updateLayeredMaterialNodeImagery(context, layer, node) {
     }
 
     if (!node.isDisplayed()) {
-        return;
+        if (layer.id in node.layersTransition) {
+            node.materials[0].uniforms.weights.value[index] = 1.0;
+            delete node.layersTransition[layer.id];
+        }
+        return Promise.resolve();
+    }
+
+    if (layer.id in node.layersTransition) {
+        const changeDuration = 0.25; // seconds
+        const start = node.layersTransition[layer.id];
+        const dt = Math.min(1.0, (Date.now() - start) * 0.001 / changeDuration);
+
+        node.materials[0].uniforms.weights.value[index] = dt;
+        if (dt == 1.0) {
+             delete node.layersTransition[layer.id];
+        } else {
+            context.view.notifyChange(30, true, node);
+            return Promise.resolve();
+        }
     }
 
     if (!layer.tileInsideLimit(node, layer)) {
@@ -215,6 +235,10 @@ export function updateLayeredMaterialNodeImagery(context, layer, node) {
                 // TODO: null texture is probably an error
                 // Maybe add an error counter for the node/layer,
                 // and stop retrying after X attempts.
+            }
+
+            if (currentLevel != EMPTY_TEXTURE_ZOOM) {
+                node.layersTransition[layer.id] = Date.now();
             }
 
             node.layerUpdateState[layer.id].success();

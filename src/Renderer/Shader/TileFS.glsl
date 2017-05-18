@@ -16,6 +16,10 @@ uniform vec4        paramLayers[ColorLayersCount];
 uniform bool        visibility[ColorLayersCount];
 uniform sampler2D   atlasTextures [ColorLayersCount];
 uniform vec4        offsetScaleAtlas[8];
+// transition handling
+uniform sampler2D   oldAtlasTextures[ColorLayersCount];
+uniform vec4        oldOffsetScaleAtlas[8];
+uniform float       weights[ColorLayersCount];
 
 uniform float       distanceFog;
 uniform int         colorLayersCount;
@@ -34,7 +38,7 @@ varying vec3        vNormal;
     const float sLine = 0.008;
 #endif
 
-vec4 paramByIndex(int index) {
+vec4 paramByIndex(vec4 osa[8], int index) {
 REPLACE_PARAM_BY_INDEX
 }
 

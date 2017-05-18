@@ -91,9 +91,11 @@ const LayeredMaterial = function LayeredMaterial(options) {
     // WARNING TODO: prevent empty slot, but it's not the solution
     this.offsetScale[l_COLOR] = Array(nbSamplers);
     this.offsetScaleAtlas = Array(nbSamplers);
+    this.oldOffsetScaleAtlas = Array(nbSamplers);
     this.offsetScale[l_ELEVATION] = [vector];
     fillArray(this.offsetScale[l_COLOR], vector);
     fillArray(this.offsetScaleAtlas, vector4);
+    fillArray(this.oldOffsetScaleAtlas, vector4);
 
     this.textures[l_ELEVATION] = [emptyTexture];
     this.textures[l_COLOR] = Array(nbSamplers);
@@ -129,6 +131,7 @@ const LayeredMaterial = function LayeredMaterial(options) {
     // Color texture cropping
     this.uniforms.offsetScale_L01 = new THREE.Uniform(this.offsetScale[l_COLOR]);
     this.uniforms.offsetScaleAtlas = new THREE.Uniform(this.offsetScaleAtlas);
+    this.uniforms.oldOffsetScaleAtlas = new THREE.Uniform(this.oldOffsetScaleAtlas);
 
     // Light position
     this.uniforms.lightPosition = new THREE.Uniform(new THREE.Vector3(-0.5, 0.0, 1.0));
@@ -140,6 +143,13 @@ const LayeredMaterial = function LayeredMaterial(options) {
     const atlasTextures = Array(8)
     fillArray(atlasTextures, emptyTexture2);
     this.uniforms.atlasTextures = new THREE.Uniform(atlasTextures);
+    const oldAtlasTextures = Array(8)
+    fillArray(oldAtlasTextures, emptyTexture2);
+    this.uniforms.oldAtlasTextures = new THREE.Uniform(oldAtlasTextures);
+    const weights = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0];
+    this.uniforms.weights = new THREE.Uniform(weights);
+    this.uniforms.elevationWeight = new THREE.Uniform(1.0);
+
 
     if (__DEBUG__) {
         this.checkLayersConsistency = function checkLayersConsistency(node, imageryLayers) {
@@ -190,7 +200,7 @@ LayeredMaterial.prototype._updateFragmentShader = function _updateFragmentShader
 
     let paramByIndexContent = '';
     for (let i=0; i<8; i++) {
-        paramByIndexContent += `if (index == ${i}) return offsetScaleAtlas[${i}];\n`;
+        paramByIndexContent += `if (index == ${i}) return osa[${i}];\n`;
     }
 
     let layerColors = '';
@@ -329,9 +339,17 @@ LayeredMaterial.prototype.setTexturesLayer = function setTexturesLayer(textures,
 
     const { atlas, uv } = this.updateAtlas(textures.map(t => t.texture), textures.map(t => t.offsetScale || new THREE.Vector3(0.0, 0.0, 1.0)));
 
+    this.uniforms.oldAtlasTextures.value[index] = this.uniforms.atlasTextures.value[index];
+    if (this.uniforms.oldAtlasTextures.value[index].id === emptyTexture2.id) {
+        this.uniforms.weights.value[index] = 1.0;
+    } else {
+        this.uniforms.weights.value[index] = 0.0;
+    }
+
     atlas.coords = [];
     for (let i=0; i<uv.length; i++) {
         atlas.coords.push(textures[i].texture.coords);
+        this.uniforms.oldOffsetScaleAtlas.value[slotOffset + i] = this.uniforms.offsetScaleAtlas.value[slotOffset + i];
         this.uniforms.offsetScaleAtlas.value[slotOffset + i] = uv[i];
     }
     this.uniforms.atlasTextures.value[index] = atlas;
