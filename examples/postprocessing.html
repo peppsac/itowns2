@@ -47,6 +47,42 @@ and open the template in the editor.
         <script src="/examples/GUI/GuiTools.js"></script>
         <script src="/dist/itowns.js"></script>
         <script src="/dist/debug.js"></script>
+        <!-- from https://github.com/mrdoob/three.js/blob/master/examples/js/shaders/DotScreenShader.js -->
+        <script type="x-shader/x-vertex" id="vertexshader">
+            varying vec2 vUv;
+
+            void main() {
+                vUv = uv;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+            }
+        </script>
+
+        <script type="x-shader/x-fragment" id="fragmentshader">
+            uniform vec2 center;
+            uniform float angle;
+            uniform float scale;
+            uniform vec2 tSize;
+
+            uniform sampler2D tDiffuse;
+
+            varying vec2 vUv;
+
+            float pattern() {
+
+                float s = sin( angle ), c = cos( angle );
+
+                vec2 tex = vUv * tSize - center;
+                vec2 point = vec2( c * tex.x - s * tex.y, s * tex.x + c * tex.y ) * scale;
+
+                return ( sin( point.x ) * sin( point.y ) ) * 4.0;
+            }
+            void main() {
+                vec4 color = texture2D( tDiffuse, vUv );
+                float average = ( color.r + color.g + color.b ) / 3.0;
+                gl_FragColor = vec4( vec3( average * 10.0 - 5.0 + pattern() ), color.a );
+            }
+        </script>
+
         <script type="text/javascript">
             /* global itowns,document,GuiTools*/
 
@@ -85,22 +121,30 @@ and open the template in the editor.
                 console.info('Globe initialized');
             });
 
-            const postprocessScene = new itowns.THREE.Scene();
-            // const quad = new THREE.Mesh( new THREE.PlaneBufferGeometry( 2, 2 ), null );
-            // quad.frustumCulled = false;
-            // postprocessScene.add( this.quad );
 
 
             const buffer = new itowns.THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight);
 
-            var geometry = new itowns.THREE.BoxGeometry( 1, 1, 1 );
-            var material = new itowns.THREE.MeshBasicMaterial( { map: buffer.texture} );
-            var cube = new itowns.THREE.Mesh( geometry, material );
-            postprocessScene.add( cube );
-            var cam = new itowns.THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
-            cam.position.set(3, 2, 1.5);
-            cam.lookAt(new itowns.THREE.Vector3());
-            cam.updateMatrix();
+            const postprocessScene = new itowns.THREE.Scene();
+            const quad = new itowns.THREE.Mesh( new itowns.THREE.PlaneBufferGeometry( 2, 2 ), new itowns.THREE.MeshBasicMaterial( { map: buffer.texture, side: itowns.THREE.DoubleSide} ));
+            quad.frustumCulled = false;
+
+            quad.material = new itowns.THREE.ShaderMaterial( {
+                uniforms: {
+                    "tDiffuse": { value: null },
+                    "tSize":    { value: new itowns.THREE.Vector2( 256, 256 ) },
+                    "center":   { value: new itowns.THREE.Vector2( 0.5, 0.5 ) },
+                    "angle":    { value: 1.57 },
+                    "scale":    { value: 1.0 }
+                },
+                vertexShader: document.getElementById('vertexshader').textContent,
+                fragmentShader: document.getElementById('fragmentshader').textContent,
+            } );
+
+
+            postprocessScene.add(quad);
+
+            var cam = new itowns.THREE.OrthographicCamera(-1, 1, 1, -1, 0, 10);
 
             apiGlobe.globeview.render = () => {
                 const g = apiGlobe.globeview.mainLoop.gfxEngine;
@@ -111,6 +155,9 @@ and open the template in the editor.
                 r.render(
                     g.scene3D,
                     apiGlobe.globeview.camera.camera3D, buffer);
+
+                quad.material.uniforms["tDiffuse"].value = buffer.texture;
+                quad.material.uniforms["tSize"].value.set(buffer.width, buffer.height);
 
                 r.setRenderTarget();
                 r.setClearColor(new itowns.THREE.Color(0.9, 0.9, 0.9));
