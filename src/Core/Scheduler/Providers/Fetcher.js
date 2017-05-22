@@ -14,15 +14,15 @@ function checkResponse(response) {
 
 export default {
 
-    json(url) {
-        return fetch(url).then((response) => {
+    json(url, options) {
+        return fetch(url, options).then((response) => {
             checkResponse(response);
             return response.json();
         });
     },
 
-    xml(url) {
-        return fetch(url).then((response) => {
+    xml(url, options) {
+        return fetch(url, options).then((response) => {
             checkResponse(response);
             return response.text();
         }).then(text => new window.DOMParser().parseFromString(text, 'text/xml'));
