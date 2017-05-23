@@ -203,6 +203,7 @@ and open the template in the editor.
             let index = 0;
             for (const url of [`${path}/../dist/1843_5176`, `${path}/../dist/1842_5177`, `${path}/../dist/1843_5175`, `${path}/../dist/1843_5177`, `${path}/../dist/1842_5176`, `${path}/../dist/1844_5175`, `${path}/../dist/1844_5176`, `${path}/../dist/1842_5175`]) {
                 let pointCount = 0;
+                let displayedCount = 0;
                 const info = document.createElement('span');
                 document.getElementById('info').appendChild(info);
                 document.getElementById('info').appendChild(document.createElement('br'));
@@ -219,6 +220,7 @@ and open the template in the editor.
 
                 pointcloud.preUpdate = (context, layer) => {
                     pointCount = 0;
+                    displayedCount = 0;
                     if (layer.root) {
                         return [layer.root];
                     } else {
@@ -229,7 +231,7 @@ and open the template in the editor.
                     // quick and dirty lod
                     const dist = elt.bbox.distanceToPoint(context.camera.camera3D.position);
                     const lod = elt.name.length;
-                    let shouldBeLoaded = false;
+                    let shouldBeLoaded = 0;
 
                     const cl = (elt.obj ? elt.obj.tightbbox : elt.bbox).clone();
                     const m = new itowns.THREE.Matrix4().setPosition(cl.min);
@@ -248,45 +250,45 @@ and open the template in the editor.
                         // so
                         const surfaceOnScreen = width * height;
                         const density = numPoints ? numPoints / surfaceOnScreen : 10000;
-                        shouldBeLoaded = density <= 0.1 || lod == 0;
-
-                        if (elt.name == '0' && elt.baseurl == "http://localhost:8080/examples/../dist/1843_5175/data/r") {
-                            // splat.style.bottom = `${50 * (onScreen.min.y + 1)}%`;
-                            // splat.style.top = `${100 - 50 * (onScreen.max.y + 1)}%`
-                            // splat.style.left = `${50 * (onScreen.min.x + 1)}%`; //'20%';
-                            // splat.style.right = `${100 - 50 * (onScreen.max.x + 1)}%`; //'20%';
-                            // splat.style['background-color'] = 'rgba(255, 0, 0, 0.25)';
-                            if (elt.bboxHelper) {
-                                elt.bboxHelper.material.color = new itowns.THREE.Color(1, 0, 0);
-                            }
+                        if (lod == 0) {
+                            shouldBeLoaded = 1
+                        } else {
+                            const threshold1 = 0.05;
+                            const threshold2 = 0.1;
+                            shouldBeLoaded = itowns.THREE.Math.lerp(1, 0,
+                                (Math.min(threshold2, Math.max(threshold1, density)) - threshold1) / (threshold2 - threshold1))
                         }
                     }
 
-                    if (shouldBeLoaded) {
+                    if (shouldBeLoaded > 0) {
                         if (elt.obj) {
-                            elt.obj.material.visible = visible;
-                            if (visible) {
-                                pointCount += elt.obj.realPointCount;
-                                info.textContent = `Nb points: ${pointCount}`;
+                            elt.obj.material.visible = true;
+
+                            elt.obj.geometry.setDrawRange(
+                                0, Math.floor(shouldBeLoaded * elt.obj.geometry.attributes.position.count));
+                            pointCount += elt.obj.realPointCount;
+                            displayedCount += Math.floor(shouldBeLoaded * elt.obj.geometry.attributes.position.count);
+                            info.textContent = `Nb points: ${displayedCount} (${Math.floor(100 * displayedCount / pointCount)} %)`;
+
+                            if (elt.bboxHelper) {
+                                elt.bboxHelper.material.visible = true;
+                                elt.bboxHelper.material.color = new itowns.THREE.Color(shouldBeLoaded, shouldBeLoaded, shouldBeLoaded);
                             }
                         } else {
-                            if (visible) {
-                                context.scheduler.execute({
+                            if (visible && !elt.promise) {
+                                elt.promise = context.scheduler.execute({
                                     layer,
                                     requester: elt,
                                     view,
+                                    priority: 100 - lod,
                                     redraw: true,
                                 }).then((pts) => {
                                     elt.obj = pts;
                                     context.view.scene.add(pts);
+                                    pts.geometry.setDrawRange(
+                                        0, shouldBeLoaded * pts.geometry.attributes.position.count);
 
                                     if (show_bbox) {
-                                        // const b = new itowns.THREE.BoxHelper(elt.bbox, bboxcolor[pointcloud.index]);
-                                        // b.frustumCulled = false;
-                                        // b.layers.set(view.tileLayer.threejsLayer);
-                                        // context.view.scene.add(b);
-                                        // elt.bboxHelper = b;
-
                                         const b2 = new itowns.THREE.BoxHelper(pts.tightbbox, bboxcolor[pointcloud.index]);
                                         b2.material.linewidth *= 3;
                                         b2.frustumCulled = false;
@@ -294,6 +296,7 @@ and open the template in the editor.
                                         context.view.scene.add(b2);
                                         elt.bboxHelper = b2;
                                     }
+                                    elt.promise = null;
                                 });
                             }
                         }
