@@ -275,7 +275,7 @@ PointCloudProvider.prototype.executeCommand = function executeCommand(command) {
                                          points.tightbbox.translate(node.bbox.min);
                                          points.updateMatrix();
                                          points.updateMatrixWorld(true);
-                                         points.layers.set(command.threejsLayer);
+                                         points.layers.set(layer.threejsLayer);
                                          return points;
                                      });
     }
