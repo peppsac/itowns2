@@ -29,13 +29,13 @@ uniform float  opacity;
 varying vec4 vColor;
 
 void main() {
-		
-        vec4 c = vColor;
-        if( useTexture == 1. ) {
-            c = texture2D( texture, gl_PointCoord );
-            float alpha = step(0.9, c.a);
-            gl_FragColor = c;//vec4(c.rgb * vLighting, c.a);
-            gl_FragColor *= alpha;
-	}else
-            gl_FragColor = c;
+
+ //        vec4 c = vColor;
+ //        if( useTexture == 1. ) {
+ //            c = texture2D( texture, gl_PointCoord );
+ //            float alpha = step(0.9, c.a);
+ //            gl_FragColor = c;//vec4(c.rgb * vLighting, c.a);
+ //            gl_FragColor *= alpha;
+	// }else
+            gl_FragColor = vec4(1.0, 0.0, 1.0, 1.0);//c;
 }

@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import Provider from './Provider';
 import Fetcher from './Fetcher';
+import PointsVS from '../../../Renderer/Shader/PointsVS.glsl';
+import PointsFS from '../../../Renderer/Shader/PointsFS.glsl';
+import ItownsPointMaterial from '../../../Renderer/ItownsPointMaterial';
 
 function PointCloudProvider() {
     Provider.call(this);
@@ -142,8 +145,19 @@ function readPositionAndColorCustomBinFormat(ab, numPoints) {
     return [positions, icolors];
 }
 
+function createPickingMaterial(pointSize, canvasHeight) {
+    return new THREE.ShaderMaterial( {
+        uniforms: {
+            size: { value: pointSize },
+            scale: { value: canvasHeight * 0.5 },
+        },
+        vertexShader: PointsVS,
+        fragmentShader: PointsFS,
+    });
+}
+
 let nextuuid = 1;
-function loadBin(url, readPositionAndColor, hasBbox) {
+function loadBin(url, readPositionAndColor, hasBbox, unused, cmd) {
     return fetch(url, { credentials: 'include' }).then(foo => foo.arrayBuffer()).then((ab) => {
         // hardcoded position + color
         const numPoints = (ab.byteLength - (hasBbox ? 6 * 4 : 0)) / (3 * 4 + 4 * 1);
@@ -179,7 +193,7 @@ function loadBin(url, readPositionAndColor, hasBbox) {
         }
         for (let i = 0; i < numPoints; i++) {
             // todo numpoints > 16bits
-            const v = (base_id << 16) | i;
+            const v     = (base_id << 16) | i;
             ids[4 * i + 0] = (v & 0xff000000) >> 24;
             ids[4 * i + 1] = (v & 0x00ff0000) >> 16;
             ids[4 * i + 2] = (v & 0x0000ff00) >> 8;
@@ -191,16 +205,24 @@ function loadBin(url, readPositionAndColor, hasBbox) {
 
         geometry.computeBoundingSphere(); // TODO: use tightbbox
 
-        var material = new THREE.PointsMaterial({
+        let material = new THREE.PointsMaterial({
             size: 2.05,
             // color: 0xff0000,
             vertexColors: THREE.VertexColors,
             sizeAttenuation: false });
+
+        let pickingMaterial = createPickingMaterial(2.05, cmd.view.mainLoop.gfxEngine.getWindowSize().y);
+
+
         const points = new THREE.Points(geometry, material);
         points.frustumCulled = false;
         points.baseId = base_id;
         points.realPointCount = numPoints;
         points.tightbbox = tightbbox;
+        points.materials = {
+            color: material,
+            picking: pickingMaterial,
+        };
 
         return points;
     });
@@ -241,7 +263,7 @@ PointCloudProvider.prototype.executeCommand = function executeCommand(command) {
 
         this.requests[url] = loadBin(`${node.baseurl}/r${node.name}.${extension}`,
                                      layer.customBinFormat ? readPositionAndColorCustomBinFormat : readPositionAndColorBinFormat, hasBbox,
-                                     node.numPoints || node.n).then((points) => {
+                                     node.numPoints || node.n, command).then((points) => {
                                          points.position.copy(node.bbox.min);
                                          points.scale.set(layer.metadata.scale, layer.metadata.scale, layer.metadata.scale);
                                          points.tightbbox.min.x *= layer.metadata.scale;

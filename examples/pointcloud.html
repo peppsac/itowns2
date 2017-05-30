@@ -85,6 +85,27 @@ and open the template in the editor.
            </svg>
         </button>
 
+        <script type="x-shader/x-vertex" id="vertexshader">
+            uniform float size;
+            uniform float scale;
+            attribute vec4 unique_id;
+            varying vec4 vColor;
+
+            void main() {
+                vColor = unique_id;
+                vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+                gl_PointSize = size * (scale / - mvPosition.z);
+                gl_Position = projectionMatrix * mvPosition;
+            }
+        </script>
+
+        <script type="x-shader/x-fragment" id="fragmentshader">
+            varying vec4 vColor;
+            void main() {
+                gl_FragColor = vColor;
+            }
+        </script>
+
         <script src="/examples/GUI/GuiTools.js"></script>
         <script src="/dist/itowns.js"></script>
         <script src="/dist/debug.js"></script>
@@ -325,6 +346,87 @@ and open the template in the editor.
                     return undefined;
                 };
                 itowns.View.prototype.addLayer.call(view, pointcloud);
+
+
+                viewerDiv.addEventListener('dblclick', (event) => {
+                    if (!pointcloud.root) {
+                        return;
+                    }
+
+                    selectionGroup.visible = false;
+                    view.scene.traverse((o) => {
+                        if (o.isPoints && o.baseId) {
+                            o.material = o.materials.picking;
+                        }
+                    });
+
+                    const mouse = {
+                        x: event.clientX - event.target.offsetLeft,
+                        y: viewerDiv.clientHeight - (event.clientY - event.target.offsetTop),
+                    };
+
+                    const buffer = view.mainLoop.gfxEngine.renderViewTobuffer(
+                        view, view.mainLoop.gfxEngine.fullSizeRenderTarget,
+                        mouse.x, mouse.y, 1, 1);
+                    console.log(buffer);
+
+
+                    const objId = (buffer[0] << 8) | buffer[1];
+                    const index = (buffer[2] << 8) | buffer[3];
+
+                    const i = (objId << 16) | index;
+                    console.log(objId, index, i);
+
+                    let newSelection = true;
+                    if (i in selected) {
+                        selectionGroup.remove(selected[i]);
+                        newSelection = false;
+                    }
+
+                    view.scene.traverse((o) => {
+                        if (o.isPoints && o.baseId) {
+                            if (newSelection) {
+                                if (o.baseId == objId) {
+                                    console.log('NEW SELECTION');
+                                    const positions = o.geometry.attributes.position.array;
+
+                                    const p = new itowns.THREE.Vector3(
+                                        positions[3 * index + 0],
+                                        positions[3 * index + 1],
+                                        positions[3 * index + 2]);
+
+                                    const g = new itowns.THREE.Geometry();
+                                    g.vertices.push(p);
+                                    const m = new itowns.THREE.PointsMaterial({
+                                        size: 2.05,
+                                        sizeAttenuation: false,
+                                        color: 0xFF0000,
+                                    });
+                                    m.depthTest = false;
+                                    const b = new itowns.THREE.Points(g, m);
+                                    b.position.copy(o.position);
+                                    b.scale.copy(o.scale);
+                                    b.updateMatrix();
+                                    b.updateMatrixWorld(true);
+                                    b.layers.set(2);
+
+                                    selectionGroup.add(b);
+
+                                    selected[i] = b;
+                                }
+
+                            }
+                            if (o.material.visible) {
+                                o.material = o.materials.color;
+                            }
+
+                        }
+
+                        selectionGroup.visible = true;
+                    });
+
+                    view.notifyChange(true);
+                });
             }
 
             view.notifyChange(0, true);
@@ -344,6 +446,11 @@ and open the template in the editor.
                     previous = Date.now();
                 }
             });
+
+            const selected = {};
+            const selectionGroup = new itowns.THREE.Group();
+            view.scene.add(selectionGroup);
+
 
         </script>
     </body>
