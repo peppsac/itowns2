@@ -100,6 +100,22 @@ export default {
                 projection.getCoordWMTS_WGS84(tileCoord, tile.extent, tileMatrixSet);
         }
     },
+    computeTMSCoordinates(tile, extent) {
+        if (tile.extent.crs() != extent.crs()) {
+            throw new Error('Unsupported configuration. TMS is only supported when geometry has the same crs than TMS layer');
+        }
+        const c = tile.extent.center();
+        const layerDimension = extent.dimensions();
+
+        // normalize x/y
+        const x = (1 + c.x() / (layerDimension.x * 0.5)) * 0.5;
+        const y = (1 - c.y() / (layerDimension.y * 0.5)) * 0.5;
+
+        const tileCount = Math.round(layerDimension.x / tile.extent.dimensions().x);
+        const zoom = Math.floor(Math.log2(tileCount));
+
+        return [new Extent('TMS', zoom, Math.floor(y * tileCount), Math.floor(x * tileCount))];
+    },
     WMTS_WGS84Parent(cWMTS, levelParent, pitch) {
         const diffLevel = cWMTS.zoom - levelParent;
         const diff = Math.pow(2, diffLevel);

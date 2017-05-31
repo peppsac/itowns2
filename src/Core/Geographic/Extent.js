@@ -6,14 +6,15 @@ import Coordinates, { crsToUnit, crsIsGeographic, assertCrsIsValid, convertValue
  * It can use explicit coordinates (e.g: lon/lat) or implicit (WMTS coordinates)
  */
 
-function _crsIsWMTS(crs) {
-    return crs.indexOf('WMTS:') == 0;
+function _crsIsWMTSorTMS(crs) {
+    return crs.indexOf('WMTS:') == 0 ||
+        crs == 'TMS';
 }
 
 function Extent(crs, ...values) {
     this._crs = crs;
 
-    if (_crsIsWMTS(crs)) {
+    if (_crsIsWMTSorTMS(crs)) {
         if (values.length == 3) {
             this._zoom = values[0];
             this._row = values[1];
@@ -68,7 +69,7 @@ function Extent(crs, ...values) {
 }
 
 Extent.prototype.clone = function clone() {
-    if (_crsIsWMTS(this._crs)) {
+    if (_crsIsWMTSorTMS(this._crs)) {
         return new Extent(this._crs, this.zoom, this.row, this.col);
     } else {
         const result = Extent(this._crs, ...this._values);
@@ -82,7 +83,7 @@ Extent.prototype.as = function as(crs) {
     if (this._crs != crs) {
         throw new Error('Unsupported yet');
     }
-    if (_crsIsWMTS(this._crs)) {
+    if (_crsIsWMTSorTMS(this._crs)) {
         throw new Error('Unsupported yet');
     }
 
@@ -98,7 +99,7 @@ Extent.prototype.offsetToParent = function offsetToParent(other) {
     if (this.crs() != other.crs()) {
         throw new Error('unsupported mix');
     }
-    if (_crsIsWMTS(this.crs())) {
+    if (_crsIsWMTSorTMS(this.crs())) {
         const diffLevel = this._zoom - other.zoom;
         const diff = Math.pow(2, diffLevel);
         const invDiff = 1 / diff;
@@ -165,7 +166,7 @@ Extent.prototype.crs = function crs() {
 };
 
 Extent.prototype.center = function center() {
-    if (_crsIsWMTS(this._crs)) {
+    if (_crsIsWMTSorTMS(this._crs)) {
         throw new Error('Invalid operation for WMTS bbox');
     }
     const c = new Coordinates(this._crs, this._values[0], this._values[2]);
@@ -188,7 +189,7 @@ Extent.prototype.dimensions = function dimensions(unit) {
  *
  * @param point {[object Object]}
  */
-Extent.prototype.isInside = function isInside(coord) {
+Extent.prototype.isPointInside = function isPointInside(coord) {
     const c = (this.crs() == coord.crs) ? coord : coord.as(this.crs());
 
     // TODO this ignores altitude
@@ -206,7 +207,7 @@ Extent.prototype.isInside = function isInside(coord) {
 };
 
 Extent.prototype.isInside = function isInside(other, epsilon) {
-    if (_crsIsWMTS(this.crs())) {
+    if (_crsIsWMTSorTMS(this.crs())) {
         if (this._zoom == other._zoom) {
             return this._row == other._row &&
                 this._col == other._col;
