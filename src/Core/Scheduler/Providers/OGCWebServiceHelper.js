@@ -31,6 +31,10 @@ export default {
             return Promise.resolve(cachedTexture);
         }
 
+        if (cachePending.get(url)) {
+            return cachePending.get(url);
+        }
+
         const { texture, promise } = Fetcher.texture(url);
 
         texture.generateMipmaps = false;
@@ -38,12 +42,16 @@ export default {
         texture.minFilter = THREE.LinearFilter;
         texture.anisotropy = 16;
 
-        return promise.then(() => {
+        const r = promise.then(() => {
             if (!cache.getRessource(url)) {
                 cache.addRessource(url, texture);
             }
+            cachePending.delete(url);
             return texture;
         });
+
+        cachePending.set(url, r);
+        return r;
     },
     getXBilTextureByUrl(url) {
         const textureCache = cache.getRessource(url);
