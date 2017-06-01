@@ -1,3 +1,4 @@
+import { EMPTY_TEXTURE_ZOOM } from '../../Renderer/LayeredMaterial';
 /**
  * This modules implements various layer update strategies.
  *
@@ -5,12 +6,13 @@
  * to reduce the amount of network traffic.
  */
 
+
 export const STRATEGY_MIN_NETWORK_TRAFFIC = 0;
 export const STRATEGY_GROUP = 1;
 export const STRATEGY_PROGRESSIVE = 2;
 export const STRATEGY_DICHOTOMY = 3;
 
-function _minimizeNetworkTraffic(nodeLevel /* , currentLevel, options */) {
+function _minimizeNetworkTraffic(nodeLevel) {
     return nodeLevel;
 }
 
@@ -33,23 +35,26 @@ function _progressive(nodeLevel, currentLevel, options) {
 // Load textures at mid-point between current level and node's level.
 // This produces smoother transitions and a single fetch updates multiple
 // tiles thanks to caching.
-function _dichotomy(nodeLevel, currentLevel /* , options */) {
+function _dichotomy(nodeLevel, currentLevel, options) {
+    if (currentLevel == EMPTY_TEXTURE_ZOOM) {
+        return options.zoom.min;
+    }
     return Math.min(
         nodeLevel,
         Math.ceil((currentLevel + nodeLevel) / 2));
 }
 
-export function chooseNextLevelToFetch(strategy, nodeLevel, currentLevel, options) {
+export function chooseNextLevelToFetch(strategy, nodeLevel, currentLevel, layer) {
     switch (strategy) {
         case STRATEGY_GROUP:
-            return _group(nodeLevel, currentLevel, options);
+            return _group(nodeLevel, currentLevel, layer.updateStrategy.options);
         case STRATEGY_PROGRESSIVE:
-            return _progressive(nodeLevel, currentLevel, options);
+            return _progressive(nodeLevel, currentLevel, layer.updateStrategy.options);
         case STRATEGY_DICHOTOMY:
-            return _dichotomy(nodeLevel, currentLevel, options);
+            return _dichotomy(nodeLevel, currentLevel, layer.options);
         // default strategy
         case STRATEGY_MIN_NETWORK_TRAFFIC:
         default:
-            return _minimizeNetworkTraffic(nodeLevel, currentLevel, options);
+            return _minimizeNetworkTraffic(nodeLevel);
     }
 }
