@@ -61,8 +61,7 @@ void main() {
             #elif defined(DATA_TEXTURE_ELEVATION)
                 float   dv  = max(texture2D( dTextures_00[0], vVv ).w, 0.);
             #elif defined(COLOR_TEXTURE_ELEVATION)
-                float   dv  = max(texture2D( dTextures_00[0], vVv ).r, 0.);
-                dv = _minElevation + dv * (_maxElevation - _minElevation);
+                float dv = mix(_minElevation, _maxElevation, max(texture2D( dTextures_00[0], vVv ).r, 0.));
             #else
 
             #error Must define either RGBA_TEXTURE_ELEVATION, DATA_TEXTURE_ELEVATION or COLOR_TEXTURE_ELEVATION
