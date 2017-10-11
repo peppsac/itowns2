@@ -60,5 +60,12 @@ promises.push(itowns.Fetcher.json('./layers/JSONLayers/Ortho.json').then(addLaye
 promises.push(itowns.Fetcher.json('./layers/JSONLayers/WORLD_DTM.json').then(addLayerCb));
 promises.push(itowns.Fetcher.json('./layers/JSONLayers/IGN_MNT_HIGHRES.json').then(addLayerCb));
 
+globeView.addFrameRequester((...args) => { console.log('UPDATE_START', ...args); }, itowns.View.UPDATE_START);
+globeView.addFrameRequester((...args) => { console.log('AFTER_CAMERAS_UPDATE', ...args); }, itowns.View.AFTER_CAMERAS_UPDATE);
+globeView.addFrameRequester((...args) => { console.log('BEFORE_LAYER_UPDATE', ...args); }, itowns.View.BEFORE_LAYER_UPDATE);
+globeView.addFrameRequester((...args) => { console.log('AFTER_LAYER_UPDATE', ...args); }, itowns.View.AFTER_LAYER_UPDATE);
+globeView.addFrameRequester((...args) => { console.log('BEFORE_RENDER', ...args); }, itowns.View.BEFORE_RENDER);
+globeView.addFrameRequester((...args) => { console.log('AFTER_RENDER', ...args); }, itowns.View.AFTER_RENDER);
+
 exports.view = globeView;
 exports.initialPosition = positionOnGlobe;
