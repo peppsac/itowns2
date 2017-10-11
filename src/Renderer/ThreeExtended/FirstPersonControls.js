@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import View from '../../Core/View';
 
 // Note: we could use existing three.js controls (like https://github.com/mrdoob/three.js/blob/dev/examples/js/controls/FirstPersonControls.js)
 // but including these controls in itowns allows use to integrate them tightly with itowns.
@@ -85,7 +86,7 @@ class FirstPersonControls extends THREE.EventDispatcher {
         domElement.addEventListener('keyup', onKeyUp.bind(this), true);
         domElement.addEventListener('keydown', onKeyDown.bind(this), true);
 
-        this.view.addFrameRequester(this);
+        this.view.addFrameRequester(this, View.AFTER_CAMERA_UPDATE);
 
         // focus policy
         if (options.focusOnMouseOver) {

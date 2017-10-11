@@ -1,4 +1,5 @@
 import { EventDispatcher } from 'three';
+import View from './View';
 
 export const RENDERING_PAUSED = 0;
 export const RENDERING_SCHEDULED = 1;
@@ -54,26 +55,19 @@ MainLoop.prototype._update = function _update(view, updateSources, dt) {
         view,
     };
 
-    // notify the frameRequesters
-    // Frame requesters should keep calling view.notifyChange in their update
-    // function if they want requestAnimationFrame to go on.
-    if (view._frameRequesters.length > 0) {
-        for (const frameRequester of view._frameRequesters) {
-            if (frameRequester.update) {
-                frameRequester.update(dt, this._updateLoopRestarted);
-            }
-        }
-    }
-
     for (const geometryLayer of view.getLayers((x, y) => !y)) {
         context.geometryLayer = geometryLayer;
         if (geometryLayer.ready) {
+            view.fireFrameRequesterAt(View.BEFORE_LAYER_UPDATE, dt, this._updateLoopRestarted, geometryLayer);
+
             // `preUpdate` returns an array of elements to update
             const elementsToUpdate = geometryLayer.preUpdate(context, geometryLayer, updateSources);
             // `update` is called in `updateElements`.
             updateElements(context, geometryLayer, elementsToUpdate);
             // `postUpdate` is called when this geom layer update process is finished
             geometryLayer.postUpdate(context, geometryLayer, updateSources);
+
+            view.fireFrameRequesterAt(View.AFTER_LAYER_UPDATE, dt, this._updateLoopRestarted, geometryLayer);
         }
     }
 };
@@ -90,10 +84,14 @@ MainLoop.prototype._step = function _step(view, timestamp) {
     const updateSources = new Set(view._changeSources);
     view._changeSources.clear();
 
+    view.fireFrameRequesterAt(View.UPDATE_START, dt, this._updateLoopRestarted);
+
     // update camera
     const dim = this.gfxEngine.getWindowSize();
 
     view.camera.update(dim.x, dim.y);
+
+    view.fireFrameRequesterAt(View.AFTER_CAMERA_UPDATE, dt, this._updateLoopRestarted);
 
     // Disable camera's matrix auto update to make sure the camera's
     // world matrix is never updated mid-update.
@@ -118,7 +116,9 @@ MainLoop.prototype._step = function _step(view, timestamp) {
     // As such there's no continuous update-loop, instead we use a ad-hoc update/render
     // mechanism.
     if (willRedraw) {
+        view.fireFrameRequesterAt(View.BEFORE_RENDER, dt, this._updateLoopRestarted);
         this._renderView(view);
+        view.fireFrameRequesterAt(View.AFTER_RENDER, dt, this._updateLoopRestarted);
     }
 
     // next time, we'll consider that we've just started the loop if we are still PAUSED now
@@ -129,6 +129,8 @@ MainLoop.prototype._step = function _step(view, timestamp) {
     }
 
     view.camera.camera3D.matrixAutoUpdate = oldAutoUpdate;
+
+    view.fireFrameRequesterAt(View.UPDATE_END, dt, this._updateLoopRestarted);
 };
 
 MainLoop.prototype._renderView = function _renderView(view) {

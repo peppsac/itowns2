@@ -10,6 +10,7 @@
 */
 
 import * as THREE from 'three';
+import View from '../../Core/View';
 
 // event keycode
 const keys = {
@@ -148,7 +149,7 @@ function PlanarControls(view, options = {}) {
 
     // add this PlanarControl instance to the view's framerequesters
     // with this, PlanarControl.update() will be called each frame
-    this.view.addFrameRequester(this);
+    this.view.addFrameRequester(this, VIEW.AFTER_CAMERA_UPDATE);
 
     // Updates the view and camera if needed, and handles the animated travel
     this.update = function update(dt, updateLoopRestarted) {

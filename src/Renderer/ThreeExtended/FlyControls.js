@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import View from '../../Core/View';
 
 const MOVEMENTS = {
     38: { method: 'translateZ', sign: -1 }, // FORWARD: up key
@@ -124,7 +125,7 @@ class FlyControls extends THREE.EventDispatcher {
         domElement.addEventListener('keyup', onKeyUp.bind(this), true);
         domElement.addEventListener('keydown', onKeyDown.bind(this), true);
 
-        this.view.addFrameRequester(this);
+        this.view.addFrameRequester(this, View.AFTER_CAMERA_UPDATE);
 
         // focus policy
         if (options.focusOnMouseOver) {

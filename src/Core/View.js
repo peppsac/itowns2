@@ -63,7 +63,7 @@ function View(crs, viewerDiv, options = {}) {
         this.mainLoop.gfxEngine.getWindowSize().y,
         options);
 
-    this._frameRequesters = [];
+    this._frameRequesters = { };
     this._layers = [];
 
     window.addEventListener('resize', () => {
@@ -350,13 +350,17 @@ View.prototype.getLayers = function getLayers(filter) {
 
 /**
  * @typedef {object} FrameRequester
- * @property {Function(dt, updateLoopRestarted)} update - Method that will be called each
- * time the MainLoop updates. This function will be given as parameter the
+ * @property {Function(dt, updateLoopRestarted, ...args)} update - Method that will be called each
+ * time the MainLoop updates (FrameRequester can also be a function)
+ * This function will be given as parameter the
  * delta (in ms) between this update and the previous one, and whether or not
  * we just started to render again. This update is considered as the "next"
  * update if view.notifyChange was called during a precedent update. If
  * view.notifyChange has been called by something else (other micro/macrotask,
  * UI events etc...), then this update is considered as being the "first".
+ * It can also receive optional arguments, depending on the attach point of this function.
+ * Currently only BEFORE_LAYER_UPDATE / AFTER_LAYER_UPDATE attach points provide
+ * an additional argument: the layer being updated.
  *
  * This means that if a FrameRequester.update function wants to animate
  * something, it should keep on calling view.notifyChange until its task is
@@ -377,20 +381,50 @@ View.prototype.getLayers = function getLayers(filter) {
  *
  * @param {FrameRequester} frameRequester
  * @param {Function} frameRequester.update - update will be called at each
+ * @param {String} when - decide when this function should be called during the update cycle.
  * MainLoop update with the time delta between last update, or 0 if the
  * MainLoop has just been relaunched.
  */
-View.prototype.addFrameRequester = function addFrameRequester(frameRequester) {
-    this._frameRequesters.push(frameRequester);
+View.prototype.addFrameRequester = function addFrameRequester(frameRequester, when = View.AFTER_CAMERAS_UPDATE) {
+    if (typeof frameRequester.update !== 'function' || typeof frameRequester !== 'function') {
+        throw new Error('frameRequester must be a function or have an function \'update\'');
+    }
+    if (!this._frameRequesters[when]) {
+        this._frameRequesters[when] = [frameRequester];
+    } else {
+        this._frameRequesters[when].push(frameRequester);
+    }
 };
 
 /**
  * Remove a frameRequester.
  *
  * @param {FrameRequester} frameRequester
+ * @param {String} when - attach point of this requester
  */
-View.prototype.removeFrameRequester = function removeFrameRequester(frameRequester) {
-    this._frameRequesters.splice(this._frameRequesters.indexOf(frameRequester), 1);
+View.prototype.removeFrameRequester = function removeFrameRequester(frameRequester, when = View.AFTER_CAMERAS_UPDATE) {
+    this._frameRequesters[when].splice(this._frameRequesters.indexOf(frameRequester), 1);
 };
+
+View.prototype.fireFrameRequesterAt = function fireFrameRequesterAt(attachPoint, dt, restart, ...args) {
+    if (!this._frameRequesters[attachPoint]) {
+        return;
+    }
+    for (const frameRequester of this._frameRequesters[attachPoint]) {
+        if (frameRequester.update) {
+            frameRequester.update(dt, restart, ...args);
+        } else {
+            frameRequester(dt, restart, ...args);
+        }
+    }
+};
+
+View.UPDATE_START = 'UPDATE_START';
+View.AFTER_CAMERA_UPDATE = 'AFTER_CAMERA_UPDATE';
+View.BEFORE_LAYER_UPDATE = 'BEFORE_LAYER_UPDATE';
+View.AFTER_LAYER_UPDATE = 'AFTER_LAYER_UPDATE';
+View.BEFORE_RENDER = 'BEFORE_RENDER';
+View.AFTER_RENDER = 'AFTER_RENDER';
+View.UPDATE_END = 'UPDATE_END';
 
 export default View;
