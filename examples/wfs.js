@@ -20,10 +20,10 @@ viewerDiv = document.getElementById('viewerDiv');
 
 // Instanciate PlanarView*
 view = new itowns.PlanarView(viewerDiv, extent, { renderer: renderer });
-view.tileLayer.disableSkirt = true;
+view.baseLayer.disableSkirt = true;
 
 // Add an WMS imagery layer (see WMS_Provider* for valid options)
-view.addLayer({
+view.baseLayer.addColorLayer({
     url: 'https://download.data.grandlyon.com/wms/grandlyon',
     networkOptions: { crossOrigin: 'anonymous' },
     type: 'color',
@@ -67,7 +67,7 @@ function colorFunctionLine(layer, node, featureCollection) {
     featureCollection.children[0].material.linewidth = 5;
 }
 
-view.addLayer({
+view.baseLayer.addFeatureLayer({
     update: itowns.FeatureProcessing.update(colorFunctionLine),
     url: 'https://download.data.grandlyon.com/wfs/rdata?',
     protocol: 'wfs',
@@ -85,7 +85,7 @@ view.addLayer({
     options: {
         mimetype: 'geojson',
     },
-}, view.tileLayer);
+});
 
 function colorFunctionBuildings(layer, node, featureCollection) {
     var i;
@@ -108,7 +108,7 @@ function colorFunctionBuildings(layer, node, featureCollection) {
         featureCollection, featureCollection.children[0], colors);
 }
 
-view.addLayer({
+view.baseLayer.addFeatureLayer({
     update: itowns.FeatureProcessing.update(colorFunctionBuildings),
     url: 'http://wxs.ign.fr/72hpsel8j8nhb5qgdh07gcyp/geoportail/wfs?',
     protocol: 'wfs',
@@ -127,6 +127,6 @@ view.addLayer({
     options: {
         mimetype: 'json',
     },
-}, view.tileLayer);
+});
 
 exports.view = view;
