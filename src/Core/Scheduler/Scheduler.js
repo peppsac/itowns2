@@ -18,18 +18,26 @@ import CancelledCommandException from './CancelledCommandException';
 
 var instanceScheduler = null;
 
+function queueOrdering(a, b) {
+    const cmp = b.priority - a.priority;
+    // Prioritize recent commands
+    if (cmp === 0) {
+        return b.timestamp - a.timestamp;
+    }
+    return cmp;
+}
+
 function _instanciateQueue() {
     return {
-        storage: new PriorityQueue({
-            comparator(a, b) {
-                var cmp = b.priority - a.priority;
-                // Prioritize recent commands
-                if (cmp === 0) {
-                    return b.timestamp - a.timestamp;
-                }
-                return cmp;
-            },
-        }),
+        getStorageForLayer(layerId) {
+            let q = this.storages[layerId];
+            if (!q) {
+                q = new PriorityQueue({ comparator: queueOrdering });
+                this.storages[layerId] = q;
+            }
+            return q;
+        },
+        storages: { },
         counters: {
             // commands in progress
             executing: 0,
@@ -39,9 +47,12 @@ function _instanciateQueue() {
             failed: 0,
             // commands cancelled
             cancelled: 0,
+            // commands pending
+            pending: 0,
         },
         execute(cmd, provider, executingCounterUpToDate) {
             if (!executingCounterUpToDate) {
+                this.counters.pending--;
                 this.counters.executing++;
             }
 
@@ -115,7 +126,7 @@ Scheduler.prototype.runCommand = function runCommand(command, queue, executingCo
 
         // try to execute next command
         if (queue.counters.executing < this.maxCommandsPerHost) {
-            const cmd = this.deQueue(queue);
+            const cmd = this.deQueue(queue, command.layer.id);
             if (cmd) {
                 return this.runCommand(cmd, queue);
             }
@@ -146,6 +157,7 @@ Scheduler.prototype.execute = function execute(command) {
     // execute command now if possible
     if (q.counters.executing < this.maxCommandsPerHost) {
         // increment before
+        q.counters.pending--;
         q.counters.executing++;
 
         var runNow = function runNow() {
@@ -157,7 +169,7 @@ Scheduler.prototype.execute = function execute(command) {
         window.setTimeout(runNow, 0);
     } else {
         command.timestamp = Date.now();
-        q.storage.queue(command);
+        q.getStorageForLayer(command.layer.id).queue(command);
     }
 
     return command.promise;
@@ -173,9 +185,9 @@ Scheduler.prototype.getProtocolProvider = function getProtocolProvider(protocol)
 };
 
 Scheduler.prototype.commandsWaitingExecutionCount = function commandsWaitingExecutionCount() {
-    let sum = this.defaultQueue.storage.length + this.defaultQueue.counters.executing;
+    let sum = this.defaultQueue.counters.pending + this.defaultQueue.counters.executing;
     for (var q of this.hostQueues) {
-        sum += q[1].storage.length + q[1].counters.executing;
+        sum += q[1].counters.pending + q[1].counters.executing;
     }
     return sum;
 };
@@ -203,12 +215,13 @@ Scheduler.prototype.getProviders = function getProviders() {
     return this.providers.slice();
 };
 
-Scheduler.prototype.deQueue = function deQueue(queue) {
-    var st = queue.storage;
+Scheduler.prototype.deQueue = function deQueue(queue, layerId) {
+    var st = queue.getStorageForLayer(layerId);
     while (st.length > 0) {
         var cmd = st.dequeue();
 
         if (cmd.earlyDropFunction && cmd.earlyDropFunction(cmd)) {
+            queue.counters.pending--;
             queue.counters.cancelled++;
             cmd.reject(new CancelledCommandException(cmd));
         } else {

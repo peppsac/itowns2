@@ -57,4 +57,24 @@ describe('Command execution', function () {
             done();
         });
     });
+
+    it('should execute balance commands between layers', function (done) {
+        const results = [];
+        const promises = [];
+        for (let i = 0; i < 50; i++) {
+            promises.push(scheduler.execute(cmd('layer0', 1000)).then(
+                (c) => { results.push(c); }
+            ));
+            promises.push(scheduler.execute(cmd('layer1', 1)).then(
+                (c) => { results.push(c); }
+            ));
+        }
+
+        Promise.all(promises).then(() => {
+            for (let i = 0; i < 100; i++) {
+                assert.equal(results[i].layer.id, ('layer' + (i % 2)));
+            }
+            done();
+        });
+    });
 });
