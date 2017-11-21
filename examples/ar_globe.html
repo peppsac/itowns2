@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+<script src='../dist/itowns.js'></script>
+<script type="text/javascript">
+    window.THREE = itowns.THREE;
+
+</script>
+<script src="../dist/ar.js"></script>
+
+<script>THREEx.ArToolkitContext.baseURL = './'</script>
+
+<body style='margin : 0px; overflow: hidden; font-family: Monospace;'><div style='position: absolute; top: 10px; width:100%; text-align: center; z-index: 1;'>
+    <a href="https://github.com/jeromeetienne/AR.js/" target="_blank">AR.js</a> - three.js mobile performance
+    <br/>
+    Contact me any time at <a href='https://twitter.com/jerome_etienne' target='_blank'>@jerome_etienne</a>
+</div><script>
+    //////////////////////////////////////////////////////////////////////////////////
+    //      Init
+    //////////////////////////////////////////////////////////////////////////////////
+
+    // init renderer
+    var renderer    = new THREE.WebGLRenderer({
+        // antialias    : true,
+        alpha: true
+    });
+    renderer.setClearColor(new THREE.Color('lightgrey'), 0)
+    // renderer.setPixelRatio( 1/2 );
+    renderer.setSize( window.innerWidth, window.innerHeight );
+    renderer.domElement.style.position = 'absolute'
+    renderer.domElement.style.top = '0px'
+    renderer.domElement.style.left = '0px'
+    document.body.appendChild( renderer.domElement );
+
+    // array of functions for the rendering loop
+    var onRenderFcts= [];
+
+    // init scene and camera
+    var scene   = new THREE.Scene();
+
+    //////////////////////////////////////////////////////////////////////////////////
+    //      Initialize a basic camera
+    //////////////////////////////////////////////////////////////////////////////////
+
+    var useVideo = (new URL(window.location.href).searchParams.get('video'));
+
+    // Create a camera
+    var camera = new THREE.Camera();
+    scene.add(camera);
+
+    ////////////////////////////////////////////////////////////////////////////////
+    //          handle arToolkitSource
+    ////////////////////////////////////////////////////////////////////////////////
+
+    var sourceOpts = {
+        sourceType : useVideo ? 'video' : 'image',
+        sourceUrl : THREEx.ArToolkitContext.baseURL + (useVideo ? 'data/headtracking.mp4' : 'data/img.jpg')
+    }
+    if (useVideo) {
+        sourceOpts['sourceWidth'] = 80*3;
+        sourceOpts['sourceHeight'] = 60*3;
+    }
+    var arToolkitSource = new THREEx.ArToolkitSource(sourceOpts)
+
+    arToolkitSource.init(function onReady(){
+        onResize()
+    })
+
+    // handle resize
+    window.addEventListener('resize', function(){
+        onResize()
+    })
+    function onResize(){
+        arToolkitSource.onResize()
+        arToolkitSource.copySizeTo(renderer.domElement)
+        if( arToolkitContext.arController !== null ){
+            arToolkitSource.copySizeTo(arToolkitContext.arController.canvas)
+        }
+    }
+    ////////////////////////////////////////////////////////////////////////////////
+    //          initialize arToolkitContext
+    ////////////////////////////////////////////////////////////////////////////////
+
+
+    // create atToolkitContext
+    var arToolkitContext = new THREEx.ArToolkitContext({
+        cameraParametersUrl: THREEx.ArToolkitContext.baseURL + 'data/camera_para.dat',
+        detectionMode: 'mono',
+        imageSmoothingEnabled: false,
+        maxDetectionRate: 30,
+        canvasWidth: 80*3,
+        canvasHeight: 60*3,
+    })
+    // initialize it
+    arToolkitContext.init(function onCompleted(){
+        camera.projectionMatrix.copy( arToolkitContext.getProjectionMatrix() );
+    })
+
+    // update artoolkit on every frame
+    onRenderFcts.push(function(){
+        if( arToolkitSource.ready === false )   return
+
+        arToolkitContext.update( arToolkitSource.domElement )
+    })
+
+
+    ////////////////////////////////////////////////////////////////////////////////
+    //          Create a ArMarkerControls
+    ////////////////////////////////////////////////////////////////////////////////
+
+    var markerRoot = new THREE.Group(); /* new THREE.Mesh(new THREE.PlaneGeometry( 1, 1, 32 )); */
+    scene.add(markerRoot)
+    var artoolkitMarker = new THREEx.ArMarkerControls(arToolkitContext, markerRoot, {
+        type : 'pattern',
+        patternUrl : THREEx.ArToolkitContext.baseURL + (useVideo ? 'data/patt.kanji' : 'data/patt.hiro')
+    })
+
+    //////////////////////////////////////////////////////////////////////////////////
+    //      add an object in the scene
+    //////////////////////////////////////////////////////////////////////////////////
+
+    const positionOnGlobe = { longitude: 2.351323, latitude: 48.856712, altitude: 25 };
+
+    // iTowns namespace defined here
+    const view = new itowns.View('EPSG:4978', {}, { renderer });
+
+
+
+    var anchor = new THREE.Group();
+    anchor.position.set(0, 0, 0.5);
+    // scale back to something reasonnable
+    anchor.scale.divide(itowns.ellipsoidSizes());
+    markerRoot.add(anchor);
+
+    const globe = itowns.createGlobeLayer('globe', { object3d: anchor, scene3D: scene });
+    globe.disableSkirt = true;
+    view.addLayer(globe);
+    itowns.Fetcher.json('./layers/JSONLayers/OPENSM.json').then((result) => {
+        result.update = itowns.updateLayeredMaterialNodeImagery;
+        view.addLayer(result, globe)
+    });
+
+
+    // onRenderFcts.push(function(){
+        // mesh.rotation.x += 0.1
+    // })
+
+    //////////////////////////////////////////////////////////////////////////////////
+    //      render the whole thing on the page
+    //////////////////////////////////////////////////////////////////////////////////
+    // var stats = new Stats();
+    // document.body.appendChild( stats.dom );
+    // render the scene
+
+
+    const oldUpdate = globe.preUpdate;
+    globe.preUpdate = (context, geometryLayer, updateSources) => {
+        if( arToolkitSource.ready === false ) {
+            // ...
+        } else {
+            arToolkitContext.update(arToolkitSource.domElement);
+            markerRoot.updateMatrix();
+            markerRoot.updateMatrixWorld(true);
+        }
+        anchor.rotateZ(0.01);
+        anchor.updateMatrixWorld(true);
+        return oldUpdate(context, geometryLayer, updateSources);
+    };
+
+    view.notifyChange(true)
+    view.render = () => {
+        renderer.render(scene, camera);
+        view.notifyChange(true);
+    }
+
+
+    // run the rendering loop
+    var lastTimeMsec= null
+    /*
+    requestAnimationFrame(function animate(nowMsec){
+        // keep looping
+        requestAnimationFrame( animate );
+        // measure time
+        lastTimeMsec    = lastTimeMsec || nowMsec-1000/60
+        var deltaMsec   = Math.min(200, nowMsec - lastTimeMsec)
+        lastTimeMsec    = nowMsec
+        // call each update function
+        onRenderFcts.forEach(function(onRenderFct){
+            onRenderFct(deltaMsec/1000, nowMsec/1000)
+        })
+    })*/
+</script></body>
