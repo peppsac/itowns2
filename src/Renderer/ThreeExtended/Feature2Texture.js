@@ -78,10 +78,18 @@ function drawFeatureCollection(ctx, collection, origin, dimension, extent, style
                 const properties = collection.features[id].properties;
                 const coordinates = features.coordinates.slice(polygon.offset, polygon.offset + polygon.count);
                 if (features.type === 'point') {
-                    drawPoint(ctx, coordinates[0], origin, dimension, style);
+                    if (typeof style == 'function') {
+                        drawPoint(ctx, coordinates[0], origin, dimension, style(properties));
+                    } else {
+                        drawPoint(ctx, coordinates[0], origin, dimension, style);
+                    }
                 } else if (polygon.extent.intersectsExtent(extent)) {
                     ctx.globalCompositeOperation = 'destination-over';
-                    drawPolygon(ctx, coordinates, origin, dimension, properties, style);
+                    if (typeof style == 'function') {
+                        drawPolygon(ctx, coordinates, origin, dimension, properties, style(properties));
+                    } else {
+                        drawPolygon(ctx, coordinates, origin, dimension, properties, style);
+                    }
                 }
             }
         }

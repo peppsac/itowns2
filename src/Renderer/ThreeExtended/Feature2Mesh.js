@@ -108,7 +108,7 @@ function coordinatesToExtrudedVertices(contour, top, bottom, target, offset) {
 function extractFeature(coordinates, properties, id) {
     const featureVertices = coordinates.featureVertices[id];
     const contour = coordinates.coordinates.slice(featureVertices.offset, featureVertices.offset + featureVertices.count);
-    const property = properties[id].properties;
+    const property = properties[id] ? properties[id].properties : properties;
     return { contour, property };
 }
 

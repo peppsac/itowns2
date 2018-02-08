@@ -247,23 +247,25 @@ export function updateLayeredMaterialNodeImagery(context, layer, node) {
 
     return context.scheduler.execute(command).then(
         (result) => {
-            if (node.material === null) {
-                return;
-            }
+            if (result) {
+                if (node.material === null) {
+                    return;
+                }
 
-            if (Array.isArray(result)) {
-                node.setTexturesLayer(result, l_COLOR, layer.id);
-            } else if (result.texture) {
-                node.setTexturesLayer([result], l_COLOR, layer.id);
+                if (Array.isArray(result)) {
+                    node.setTexturesLayer(result, l_COLOR, layer.id);
+                } else if (result.texture) {
+                    node.setTexturesLayer([result], l_COLOR, layer.id);
+                } else {
+                    // TODO: null texture is probably an error
+                    // Maybe add an error counter for the node/layer,
+                    // and stop retrying after X attempts.
+                }
+
+                node.layerUpdateState[layer.id].success();
             } else {
-                // TODO: null texture is probably an error
-                // Maybe add an error counter for the node/layer,
-                // and stop retrying after X attempts.
+                node.layerUpdateState[layer.id].failure(1, true);
             }
-
-            node.layerUpdateState[layer.id].success();
-
-            return result;
         },
         (err) => {
             if (err instanceof CancelledCommandException) {
