@@ -39,15 +39,41 @@ var onMouseWheel = function onMouseWheel(event) {
 var dragStartPosition;
 var dragCameraStart;
 
+// Val de marne
 view.camera.camera3D.left = 237013;
 view.camera.camera3D.right = 310845;
 view.camera.camera3D.top = 6202048;
 view.camera.camera3D.bottom = 6271271;
+
+// Saclay
+// view.camera.camera3D.left = 230000;
+// view.camera.camera3D.right = 253000;
+// view.camera.camera3D.top = 6237000;
+// view.camera.camera3D.bottom = 6224000;
 view.notifyChange(true);
 
 // By default itowns' tiles geometry have a "skirt" (ie they have a height),
 // but in case of orthographic we don't need this feature, so disable it
 view.tileLayer.disableSkirt = true;
+view.addLayer({
+    type: 'color',
+    protocol: 'xyz',
+    id: 'OPENSM',
+    // eslint-disable-next-line no-template-curly-in-string
+    url: 'http://c.tile.stamen.com/watercolor/${z}/${x}/${y}.jpg',
+    networkOptions: { crossOrigin: 'anonymous' },
+    extent: [extent.west(), extent.east(), extent.south(), extent.north()],
+    projection: 'EPSG:3857',
+    options: {
+        attribution: {
+            name: 'OpenStreetMap',
+            url: 'http://www.openstreetmap.org/',
+        },
+    },
+    updateStrategy: {
+        type: itowns.STRATEGY_DICHOTOMY,
+    },
+});
 
 function featureFilter(properties) {
     if (properties.vt_layer == 'surface_commune') {
@@ -108,36 +134,8 @@ function colorFeature(properties) {
 }
 
 // TMS color
-// view.addLayer({
-    // type: 'color',
-    // protocol: 'tms',
-    // id: 'MVT',
-    // // eslint-disable-next-line no-template-curly-in-string
-    // url: 'http://172.16.3.109:8082/geoserver/gwc/service/tms/1.0.0/vecteur_tuile:bduni@EPSG:3857@pbf/${z}/${x}/${y}.pbf',
-    // extent: [extent.west(), extent.east(), extent.south(), extent.north()],
-    // projection: 'EPSG:3857',
-    // options: {
-        // attribution: {
-            // name: 'OpenStreetMap',
-            // url: 'http://www.openstreetmap.org/',
-        // },
-        // mimetype: 'application/x-protobuf;type=mapbox-vector',
-        // zoom: {
-            // min: 2,
-            // max: 20,
-        // },
-    // },
-    // updateStrategy: {
-        // type: itowns.STRATEGY_DICHOTOMY,
-    // },
-    // style: styleFeature,
-    // filter: featureFilter,
-    // sort: sortFeatures,
-// });
-
-// TMS geometry
 view.addLayer({
-    type: 'geometry',
+    type: 'color',
     protocol: 'tms',
     id: 'MVT',
     // eslint-disable-next-line no-template-curly-in-string
@@ -158,11 +156,40 @@ view.addLayer({
     updateStrategy: {
         type: itowns.STRATEGY_DICHOTOMY,
     },
-    update: itowns.FeatureProcessing.update,
-    convert: itowns.Feature2Mesh.convert({
-        color: colorFeature }),
+    style: styleFeature,
     filter: featureFilter,
+    sort: sortFeatures,
 });
+
+// TMS geometry
+// view.addLayer({
+    // type: 'geometry',
+    // protocol: 'tms',
+    // id: 'MVT',
+    // // eslint-disable-next-line no-template-curly-in-string
+    // // url: 'http://172.16.3.109:8082/geoserver/gwc/service/tms/1.0.0/vecteur_tuile:batiment_saclay@EPSG:3857@pbf/${z}/${x}/${y}.pbf',
+    // url: 'http://172.16.3.109:8082/geoserver/gwc/service/tms/1.0.0/vecteur_tuile:bduni@EPSG:3857@pbf/${z}/${x}/${y}.pbf',
+    // extent: [extent.west(), extent.east(), extent.south(), extent.north()],
+    // projection: 'EPSG:3857',
+    // options: {
+        // attribution: {
+            // name: 'OpenStreetMap',
+            // url: 'http://www.openstreetmap.org/',
+        // },
+        // mimetype: 'application/x-protobuf;type=mapbox-vector',
+        // zoom: {
+            // min: 2,
+            // max: 20,
+        // },
+    // },
+    // updateStrategy: {
+        // type: itowns.STRATEGY_DICHOTOMY,
+    // },
+    // update: itowns.FeatureProcessing.update,
+    // convert: itowns.Feature2Mesh.convert({
+        // color: colorFeature }),
+    // filter: featureFilter,
+// });
 
 viewerDiv.addEventListener('DOMMouseScroll', onMouseWheel);
 viewerDiv.addEventListener('mousewheel', onMouseWheel);

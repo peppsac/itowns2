@@ -59,6 +59,13 @@
         <script>
             var menuGlobe = new GuiTools('menuDiv', view, 300);
             var d = new debug.Debug(view, menuGlobe.gui);
+
+            for (const layer of view.getLayers()) {
+                layer.whenReady.then( function _(layer) {
+                    debug.createTileDebugUI(menuGlobe.gui, view, layer, d);
+                });
+            }
+
         </script>
     </body>
 </html>
