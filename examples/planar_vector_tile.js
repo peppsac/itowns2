@@ -143,7 +143,7 @@ itowns.Fetcher.json('http://localhost:8080/style.json').then((style) => {
             }
             return styles;
         },
-        filter: (properties, feature) => {
+        filter: (properties, geometry) => {
             properties.mapboxLayer = [];
             for (const layer of mapboxLayers) {
                 if (properties.vt_layer !== layer['source-layer']) {
@@ -151,15 +151,25 @@ itowns.Fetcher.json('http://localhost:8080/style.json').then((style) => {
                 }
                 if ('filter' in layer) {
                     let filteredOut = false;
-                    for (const filter of layer['filter']) {
+                    for (let i = 0; i < layer['filter'].length; i++) {
+                        const filter = layer['filter'][i];
+
+                        if (filter.length === undefined) {
+                            continue;
+                        }
                         if (filter[0] == '==') {
                             if (filter[1] == '$type') {
-                                // ignore
-                                continue;
+                                filteredOut |= (filter[2] != geometry.type);
                             }
-                            if (filter[1] in properties) {
-                                filteredOut &= (properties[filter[1]] == filter[2]);
+                            else if (filter[1] in properties) {
+                                filteredOut |= (properties[filter[1]] != filter[2]);
                             }
+                        }
+                        else if (filter[0] == 'in') {
+                            filteredOut |= (filter.slice(2).indexOf(properties[filter[1]]) == -1);
+                        }
+                        if (filteredOut) {
+                            break;
                         }
                     }
                     if (!filteredOut) {

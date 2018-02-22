@@ -16,10 +16,11 @@ function drawPolygon(ctx, vertices, origin, dimension, properties, style = {}) {
     }
 }
 
+const scale = new THREE.Vector2();
 function _drawPolygon(ctx, vertices, origin, dimension, properties, style) {
     // compute scale transformation extent to canvas
     //
-    const scale = new THREE.Vector2(ctx.canvas.width / dimension.x, ctx.canvas.width / dimension.y);
+    scale.set(ctx.canvas.width / dimension.x, ctx.canvas.width / dimension.y);
     ctx.beginPath();
     pt.x = vertices[0]._values[0] - origin.x;
     pt.y = vertices[0]._values[1] - origin.y;
@@ -28,9 +29,9 @@ function _drawPolygon(ctx, vertices, origin, dimension, properties, style) {
     ctx.moveTo(pt.x, pt.y);
 
     // build path
-    for (const vertice of vertices.slice(1)) {
-        pt.x = vertice._values[0] - origin.x;
-        pt.y = vertice._values[1] - origin.y;
+    for (let i = 1; i < vertices.length; i++) {
+        pt.x = vertices[i]._values[0] - origin.x;
+        pt.y = vertices[i]._values[1] - origin.y;
         pt.multiply(scale);
         ctx.lineTo(pt.x, pt.y);
     }
@@ -53,7 +54,7 @@ function _drawPolygon(ctx, vertices, origin, dimension, properties, style) {
 }
 
 function drawPoint(ctx, vertice, origin, dimension, style = {}) {
-    const scale = new THREE.Vector2(ctx.canvas.width / dimension.x, ctx.canvas.width / dimension.y);
+    scale.set(ctx.canvas.width / dimension.x, ctx.canvas.width / dimension.y);
     pt.x = vertice._values[0] - origin.x;
     pt.y = vertice._values[1] - origin.y;
     pt.multiply(scale);

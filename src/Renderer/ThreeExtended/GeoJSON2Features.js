@@ -160,7 +160,8 @@ function readGeometry(crsIn, crsOut, json, filteringExtent, options) {
 
 function readFeature(crsIn, crsOut, json, filteringExtent, options) {
     const feature = {};
-    if (options.filter && !options.filter(json.properties, feature)) {
+
+    if (options.filter && !options.filter(json.properties, json.geometry)) {
         return;
     }
     feature.geometry = readGeometry(crsIn, crsOut, json.geometry, filteringExtent, options);
