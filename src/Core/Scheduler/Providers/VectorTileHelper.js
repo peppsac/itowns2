@@ -36,9 +36,6 @@ const getVectorTileRawByURL = function getVectorTileRawByURL(url, networkOptions
     }
 
     const pending = cachePending.get(url);
-    if (pending) {
-        return pending;
-    }
 
     const promise = (cachePending.has(url)) ?
         cachePending.get(url) :
@@ -46,7 +43,13 @@ const getVectorTileRawByURL = function getVectorTileRawByURL(url, networkOptions
 
     cachePending.set(url, promise);
 
-    return promise.then(buffer => (new VectorTile(new Protobuf(buffer))));
+    return promise.then((buffer) => {
+        let r = cache.getRessource(url);
+        if (!r) {
+            cache.addRessource(url, new VectorTile(new Protobuf(buffer)));
+        }
+        return cache.getRessource(url);
+    });
 };
 
 /**
@@ -118,6 +121,10 @@ const getVectorTileTextureByUrl = function getVectorTileTextureByUrl(url, tile, 
 
         const features = GeoJSON2Features.parse(tile.extent.crs(), geojson,
             layer.extent, { filter: layer.filter, buildExtent: true });
+
+        if (!features) {
+            return;
+        }
 
         // sort features before drawing
         if (layer.sort) {

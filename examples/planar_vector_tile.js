@@ -4,8 +4,8 @@
 // Define geographic extent: CRS, min/max X, min/max Y
 var extent = new itowns.Extent(
     'EPSG:3857',
-    -20026376.39, 20026376.39,
-    -20048966.10, 20048966.10);
+    -20037508.342789244, 20037508.342789244,
+    -20037508.342789255, 20037508.342789244);
 
 // `viewerDiv` will contain iTowns' rendering area (`<canvas>`)
 var viewerDiv = document.getElementById('viewerDiv');
@@ -40,10 +40,10 @@ var dragStartPosition;
 var dragCameraStart;
 
 // Val de marne
-view.camera.camera3D.left = 237013;
-view.camera.camera3D.right = 310845;
-view.camera.camera3D.top = 6202048;
-view.camera.camera3D.bottom = 6271271;
+view.camera.camera3D.left = 538488;
+view.camera.camera3D.right = 667935;
+view.camera.camera3D.top = 5690491;
+view.camera.camera3D.bottom = 5606934;
 
 // Saclay
 // view.camera.camera3D.left = 230000;
@@ -76,90 +76,92 @@ view.addLayer({
 });
 
 function featureFilter(properties) {
+    return true;
     if (properties.vt_layer == 'surface_commune') {
         return true;
     }
     return false;
 }
 
-function styleFeature(properties) {
-    var style = {
-        fillOpacity: 1,
-    };
 
-    if (properties.vt_layer == 'surface_commune') {
-        style.fill = '#ccffff';
-    } else if (properties.vt_layer == 'zone_de_vegetation') {
-        style.fill = '#7fff00';
-    } else if (properties.vt_layer == 'batiment') {
-        style.fill = '#ffcccc';
+let count = 0;
+itowns.Fetcher.json('http://localhost:8080/style.json').then((style) => {
+    view.tileLayer.noTextureColor =
+    new itowns.THREE.Color(style['layers'][0]['paint']['background-color']);
+    // add one layer per layer in style.json
+    for (const layer of style['layers']) {
+        if (layer.type != 'fill' && layer.type != 'line') {
+            continue;
+        }
+        if (count++ > 10) {break;}
+        view.addLayer({
+            type: 'color',
+            protocol: 'xyz',
+            id: 'MVT' + layer.id,
+            // eslint-disable-next-line no-template-curly-in-string
+            url: 'http://127.0.0.1:8080/tiles/${z}/${x}/${y}.pbf',
+            extent: [extent.west(), extent.east(), extent.south(), extent.north()],
+            projection: 'EPSG:3857',
+            options: {
+                attribution: {
+                    name: 'OpenStreetMap',
+                    url: 'http://www.openstreetmap.org/',
+                },
+                mimetype: 'application/x-protobuf;type=mapbox-vector',
+                zoom: {
+                    min: 2,
+                    max: 20,
+                },
+            },
+            updateStrategy: {
+                type: itowns.STRATEGY_DICHOTOMY,
+            },
+            style: (properties) => {
+                const r = { };
+                if ('paint' in layer) {
+                    if (layer.type == 'fill') {
+                        r.fill = layer['paint']['fill-color'];
+                        r.fillOpacity = layer['paint']['fill-opacity'];
+                    }
+                    if (layer.type == 'line') {
+                        r.stroke = layer['paint']['line-color'];
+                        if ('line-width' in layer['paint']) {
+                            r.strokeWidth = layer['paint']['line-width']['base'];
+                        }
+                        r.strokeOpacity = layer['paint']['line-opacity'];
+                    }
+                }
+                return r;
+            },
+            filter: (properties) => {
+                if (properties.vt_layer !== layer['source-layer']) {
+                    return false;
+                }
+                if ('filter' in layer) {
+                    for (const filter of layer['filter']) {
+                        if (filter[0] == '==') {
+                            if (filter[1] == '$type') {
+                                // ignore
+                                continue;
+                            }
+                            if (filter[1] in properties) {
+                                return properties[filter[1]] == filter[2];
+                            }
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            },
+        });
+
     }
-
-    return style;
-}
-
-function sortFeatures(a, b) {
-    var key_a = a.properties.vt_layer;
-    var key_b = b.properties.vt_layer;
-
-    if (key_a == key_b) {
-        return 0;
-    } else if (key_a == 'surface_commune' && key_b == 'zone_de_vegetation') {
-        return -1;
-    } else if (key_a == 'surface_commune' && key_b == 'batiment') {
-        return -1;
-    } else if (key_a == 'zone_de_vegetation' && key_b == 'surface_commune') {
-        return 1;
-    } else if (key_a == 'zone_de_vegetation' && key_b == 'batiment') {
-        return -1;
-    } else if (key_a == 'batiment' && key_b == 'surface_commune') {
-        return 1;
-    } else if (key_a == 'batiment' && key_b == 'zone_de_vegetation') {
-        return 1;
-    }
-
-    return 0;
-}
-
-function colorFeature(properties) {
-    if (properties.vt_layer == 'surface_commune') {
-        return new itowns.THREE.Color(0xccffff);
-    } else if (properties.vt_layer == 'zone_de_vegetation') {
-        return new itowns.THREE.Color(0x7fff00);
-    } else if (properties.vt_layer == 'batiment') {
-        return new itowns.THREE.Color(0xffcccc);
-    }
-
-    return new itowns.THREE.Color(0xff0000);
-}
-
-// TMS color
-view.addLayer({
-    type: 'color',
-    protocol: 'tms',
-    id: 'MVT',
-    // eslint-disable-next-line no-template-curly-in-string
-    url: 'http://172.16.3.109:8082/geoserver/gwc/service/tms/1.0.0/vecteur_tuile:bduni@EPSG:3857@pbf/${z}/${x}/${y}.pbf',
-    extent: [extent.west(), extent.east(), extent.south(), extent.north()],
-    projection: 'EPSG:3857',
-    options: {
-        attribution: {
-            name: 'OpenStreetMap',
-            url: 'http://www.openstreetmap.org/',
-        },
-        mimetype: 'application/x-protobuf;type=mapbox-vector',
-        zoom: {
-            min: 2,
-            max: 20,
-        },
-    },
-    updateStrategy: {
-        type: itowns.STRATEGY_DICHOTOMY,
-    },
-    style: styleFeature,
-    filter: featureFilter,
-    sort: sortFeatures,
 });
+
+
+
+
+
 
 // TMS geometry
 // view.addLayer({

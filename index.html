@@ -50,15 +50,27 @@ and open the template in the editor.
 
             var promises = []
             promises.push(itowns.Fetcher.json('examples/layers/JSONLayers/Ortho.json').then(addLayerCb));
-            promises.push(itowns.Fetcher.json('examples/layers/JSONLayers/OrthosCRS.json').then(addLayerCb));
-            promises.push(itowns.Fetcher.json('examples/layers/JSONLayers/ScanEX.json').then(addLayerCb));
-            promises.push(itowns.Fetcher.json('examples/layers/JSONLayers/Region.json').then(addLayerCb));
 
-            promises.push(itowns.Fetcher.json('examples/layers/JSONLayers/Cada.json').then(addLayerCb));
-            promises.push(itowns.Fetcher.json('examples/layers/JSONLayers/Administrative.json').then(addLayerCb));
-            promises.push(itowns.Fetcher.json('examples/layers/JSONLayers/Transport.json').then(addLayerCb));
-            promises.push(itowns.Fetcher.json('examples/layers/JSONLayers/Railways.json').then(addLayerCb));
-            promises.push(itowns.Fetcher.json('examples/layers/JSONLayers/Denomination.json').then(addLayerCb));
+function styleFeature(properties) {
+    var style = {
+        fillOpacity: 1,
+    };
+
+    if (properties.vt_layer == 'surface_commune') {
+        style.fill = '#ccffff';
+    } else if (properties.vt_layer == 'zone_de_vegetation') {
+        style.fill = '#7fff00';
+    } else if (properties.vt_layer == 'batiment') {
+        style.fill = '#ffcccc';
+    } else {
+        style.fill = '#ff0000';
+    }
+
+    return style;
+}
+
+
+
 
             promises.push(itowns.Fetcher.json('examples/layers/JSONLayers/WORLD_DTM.json').then(addLayerCb));
             promises.push(itowns.Fetcher.json('examples/layers/JSONLayers/IGN_MNT_HIGHRES.json').then(addLayerCb));

@@ -108,14 +108,12 @@ export default {
         c.width = sizeTexture;
         c.height = sizeTexture;
         const ctx = c.getContext('2d');
-
         // Draw the canvas
         if (feature.geometries) {
             drawFeatureCollection(ctx, feature, origin, dimension, extent, style);
         } else {
             drawFeature(ctx, feature, origin, dimension, extent, style);
         }
-
         const texture = new THREE.Texture(c);
         texture.flipY = false;
         texture.generateMipmaps = false;
