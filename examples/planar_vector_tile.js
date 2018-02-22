@@ -84,6 +84,8 @@ function featureFilter(properties) {
 }
 
 
+const mapboxLayers = [];
+
 let count = 0;
 itowns.Fetcher.json('http://localhost:8080/style.json').then((style) => {
     view.tileLayer.noTextureColor =
@@ -93,31 +95,37 @@ itowns.Fetcher.json('http://localhost:8080/style.json').then((style) => {
         if (layer.type != 'fill' && layer.type != 'line') {
             continue;
         }
-        if (count++ > 10) {break;}
-        view.addLayer({
-            type: 'color',
-            protocol: 'xyz',
-            id: 'MVT' + layer.id,
-            // eslint-disable-next-line no-template-curly-in-string
-            url: 'http://127.0.0.1:8080/tiles/${z}/${x}/${y}.pbf',
-            extent: [extent.west(), extent.east(), extent.south(), extent.north()],
-            projection: 'EPSG:3857',
-            options: {
-                attribution: {
-                    name: 'OpenStreetMap',
-                    url: 'http://www.openstreetmap.org/',
-                },
-                mimetype: 'application/x-protobuf;type=mapbox-vector',
-                zoom: {
-                    min: 2,
-                    max: 20,
-                },
+        mapboxLayers.push(layer);
+    }
+
+
+    view.addLayer({
+        type: 'color',
+        protocol: 'xyz',
+        id: 'MVT',
+        // eslint-disable-next-line no-template-curly-in-string
+        url: 'http://127.0.0.1:8080/tiles/${z}/${x}/${y}.pbf',
+        extent: [extent.west(), extent.east(), extent.south(), extent.north()],
+        projection: 'EPSG:3857',
+        options: {
+            attribution: {
+                name: 'OpenStreetMap',
+                url: 'http://www.openstreetmap.org/',
             },
-            updateStrategy: {
-                type: itowns.STRATEGY_DICHOTOMY,
+            mimetype: 'application/x-protobuf;type=mapbox-vector',
+            zoom: {
+                min: 2,
+                max: 20,
             },
-            style: (properties) => {
+        },
+        updateStrategy: {
+            type: itowns.STRATEGY_DICHOTOMY,
+        },
+        style: (properties, feature) => {
+            const styles = [];
+            for (const layer of properties.mapboxLayer) {
                 const r = { };
+                // a feature could be used in several layers...
                 if ('paint' in layer) {
                     if (layer.type == 'fill') {
                         r.fill = layer['paint']['fill-color'];
@@ -131,13 +139,18 @@ itowns.Fetcher.json('http://localhost:8080/style.json').then((style) => {
                         r.strokeOpacity = layer['paint']['line-opacity'];
                     }
                 }
-                return r;
-            },
-            filter: (properties) => {
+                styles.push(r);
+            }
+            return styles;
+        },
+        filter: (properties, feature) => {
+            properties.mapboxLayer = [];
+            for (const layer of mapboxLayers) {
                 if (properties.vt_layer !== layer['source-layer']) {
-                    return false;
+                    continue;
                 }
                 if ('filter' in layer) {
+                    let filteredOut = false;
                     for (const filter of layer['filter']) {
                         if (filter[0] == '==') {
                             if (filter[1] == '$type') {
@@ -145,19 +158,21 @@ itowns.Fetcher.json('http://localhost:8080/style.json').then((style) => {
                                 continue;
                             }
                             if (filter[1] in properties) {
-                                return properties[filter[1]] == filter[2];
+                                filteredOut &= (properties[filter[1]] == filter[2]);
                             }
-                            return false;
                         }
                     }
+                    if (!filteredOut) {
+                        properties.mapboxLayer.push(layer);
+                    }
+                } else {
+                    properties.mapboxLayer.push(layer);
                 }
-                return true;
-            },
-        });
-
-    }
+            }
+            return properties.mapboxLayer.length > 0;
+        },
+    });
 });
-
 
 
 

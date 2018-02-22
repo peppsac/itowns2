@@ -35,20 +35,21 @@ const getVectorTileRawByURL = function getVectorTileRawByURL(url, networkOptions
         return Promise.resolve(textureCache);
     }
 
-    const pending = cachePending.get(url);
-
     const promise = (cachePending.has(url)) ?
         cachePending.get(url) :
         Fetcher.arrayBuffer(url, networkOptions);
 
-    cachePending.set(url, promise);
+    if (!cachePending.has(url)) {
+        cachePending.set(url, promise);
+    }
 
     return promise.then((buffer) => {
         let r = cache.getRessource(url);
         if (!r) {
-            cache.addRessource(url, new VectorTile(new Protobuf(buffer)));
+            r = new VectorTile(new Protobuf(buffer));
+            cache.addRessource(url, r);
         }
-        return cache.getRessource(url);
+        return r;
     });
 };
 

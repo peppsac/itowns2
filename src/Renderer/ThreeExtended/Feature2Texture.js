@@ -7,6 +7,16 @@ function drawPolygon(ctx, vertices, origin, dimension, properties, style = {}) {
     if (vertices.length === 0) {
         return;
     }
+    if (style.length) {
+        for (const s of style) {
+            _drawPolygon(ctx, vertices, origin, dimension, properties, s);
+        }
+    } else {
+        _drawPolygon(ctx, vertices, origin, dimension, properties, style);
+    }
+}
+
+function _drawPolygon(ctx, vertices, origin, dimension, properties, style) {
     // compute scale transformation extent to canvas
     //
     const scale = new THREE.Vector2(ctx.canvas.width / dimension.x, ctx.canvas.width / dimension.y);
@@ -16,10 +26,9 @@ function drawPolygon(ctx, vertices, origin, dimension, properties, style = {}) {
     pt.multiply(scale);
     // Place the first point
     ctx.moveTo(pt.x, pt.y);
-    vertices.shift();
 
     // build path
-    for (const vertice of vertices) {
+    for (const vertice of vertices.slice(1)) {
         pt.x = vertice._values[0] - origin.x;
         pt.y = vertice._values[1] - origin.y;
         pt.multiply(scale);
