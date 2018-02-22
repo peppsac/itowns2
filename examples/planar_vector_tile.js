@@ -104,7 +104,8 @@ itowns.Fetcher.json('http://localhost:8080/style.json').then((style) => {
         protocol: 'xyz',
         id: 'MVT',
         // eslint-disable-next-line no-template-curly-in-string
-        url: 'http://127.0.0.1:8080/tiles/${z}/${x}/${y}.pbf',
+        url: 'https://osm.oslandia.io/data/v3/${z}/${x}/${y}.pbf',
+        // url: 'http://127.0.0.1:8080/tiles/${z}/${x}/${y}.pbf',
         extent: [extent.west(), extent.east(), extent.south(), extent.north()],
         projection: 'EPSG:3857',
         options: {
