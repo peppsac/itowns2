@@ -7,12 +7,17 @@ function TMS_Provider() {
 
 TMS_Provider.prototype.preprocessDataLayer = function preprocessDataLayer(layer) {
     if (!layer.extent) {
-        throw new Error(`Missing extent property for layer '${layer.id}'`);
+        // default to the full 3857 extent
+        layer.extent = new Extent('EPSG:3857',
+            -20037508.342789244, 20037508.342789244,
+            -20037508.342789255, 20037508.342789244);
     }
-    if (!layer.projection) {
-        throw new Error(`Missing projection property for layer '${layer.id}'`);
+    if (!(layer.extent instanceof (Extent))) {
+        if (!layer.projection) {
+            throw new Error(`Missing projection property for layer '${layer.id}'`);
+        }
+        layer.extent = new Extent(layer.projection, ...layer.extent);
     }
-    layer.extent = new Extent(layer.projection, ...layer.extent);
     layer.origin = layer.origin || (layer.protocol == 'xyz' ? 'top' : 'bottom');
     if (!layer.options.zoom) {
         layer.options.zoom = {
@@ -33,25 +38,29 @@ TMS_Provider.prototype.url = function url(coTMS, layer) {
 TMS_Provider.prototype.executeCommand = function executeCommand(command) {
     const layer = command.layer;
     const tile = command.requester;
-    const coordTMS = tile.getCoordsForLayer(layer)[0];
-    const coordTMSParent = (command.targetLevel < coordTMS.zoom) ?
-        OGCWebServiceHelper.WMTS_WGS84Parent(coordTMS, command.targetLevel) :
-        undefined;
 
-    const url = this.url(coordTMSParent || coordTMS, layer);
+    const promises = [];
+    for (const coordTMS of tile.getCoordsForLayer(layer)) {
+        const coordTMSParent = (command.targetLevel < coordTMS.zoom) ?
+            OGCWebServiceHelper.WMTS_WGS84Parent(coordTMS, command.targetLevel) :
+            undefined;
 
-    return OGCWebServiceHelper.getColorTextureByUrl(url, layer.networkOptions).then((texture) => {
-        const result = {};
-        result.texture = texture;
-        result.texture.coords = coordTMSParent || coordTMS;
-        result.pitch = coordTMSParent ?
-            coordTMS.offsetToParent(coordTMSParent) :
-            new THREE.Vector4(0, 0, 1, 1);
-        if (layer.transparent) {
-            texture.premultiplyAlpha = true;
-        }
-        return result;
-    });
+        const url = this.url(coordTMSParent || coordTMS, layer);
+
+        promises.push(OGCWebServiceHelper.getColorTextureByUrl(url, layer.networkOptions).then((texture) => {
+            const result = {};
+            result.texture = texture;
+            result.texture.coords = coordTMSParent || coordTMS;
+            result.pitch = coordTMSParent ?
+                coordTMS.offsetToParent(coordTMSParent) :
+                new THREE.Vector4(0, 0, 1, 1);
+            if (layer.transparent) {
+                texture.premultiplyAlpha = true;
+            }
+            return result;
+        }));
+    }
+    return Promise.all(promises);
 };
 
 TMS_Provider.prototype.tileTextureCount = function tileTextureCount(tile, layer) {
