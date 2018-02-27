@@ -132,12 +132,15 @@ const getVectorTileTextureByUrl = function getVectorTileTextureByUrl(url, tile, 
             features.features.sort(layer.sort);
         }
 
-        const colorCoords = tile.extent.as(layer.projection);
+        const colorCoords = coords;
         const result = { pitch: new THREE.Vector4(0, 0, 1, 1) };
-        result.texture = Feature2Texture.createTextureFromFeature(features, tile.extent, 256, layer.style);
+        result.texture = Feature2Texture.createTextureFromFeature(
+            features,
+            coords.crs() == 'TMS' ? tile.extent : coords.as(tile.extent.crs()),
+            256, layer.style);
         result.texture.extent = tile.extent;
         result.texture.coords = colorCoords;
-        result.texture.coords.zoom = tile.level;
+        // result.texture.coords.zoom = tile.level;
 
         if (layer.transparent) {
             result.texture.premultiplyAlpha = true;

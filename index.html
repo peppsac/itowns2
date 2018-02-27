@@ -50,30 +50,104 @@ and open the template in the editor.
 
             var promises = []
             promises.push(itowns.Fetcher.json('examples/layers/JSONLayers/Ortho.json').then(addLayerCb));
+            promises.push(itowns.Fetcher.json('examples/layers/JSONLayers/OPENSM.json').then(addLayerCb));
 
-function styleFeature(properties) {
-    var style = {
-        fillOpacity: 1,
-    };
+const mapboxLayers = [];
 
-    if (properties.vt_layer == 'surface_commune') {
-        style.fill = '#ccffff';
-    } else if (properties.vt_layer == 'zone_de_vegetation') {
-        style.fill = '#7fff00';
-    } else if (properties.vt_layer == 'batiment') {
-        style.fill = '#ffcccc';
-    } else {
-        style.fill = '#ff0000';
+let count = 0;
+itowns.Fetcher.json('http://localhost:8080/style.json').then((style) => {
+    // add one layer per layer in style.json
+    for (const layer of style['layers']) {
+        if (layer.type != 'fill' && layer.type != 'line') {
+            continue;
+        }
+        mapboxLayers.push(layer);
     }
 
-    return style;
-}
 
+    globeView.addLayer({
+        type: 'color',
+        protocol: 'xyz',
+        id: 'MVT',
+        // eslint-disable-next-line no-template-curly-in-string
+        url: 'https://osm.oslandia.io/data/v3/${z}/${x}/${y}.pbf',
+        options: {
+            attribution: {
+                name: 'OpenStreetMap',
+                url: 'http://www.openstreetmap.org/',
+            },
+            mimetype: 'application/x-protobuf;type=mapbox-vector',
+            zoom: {
+                min: 2,
+                max: 20,
+            },
+        },
+        updateStrategy: {
+            type: itowns.STRATEGY_DICHOTOMY,
+        },
+        style: (properties, feature) => {
+            const styles = [];
+            for (const layer of properties.mapboxLayer) {
+                const r = { };
+                // a feature could be used in several layers...
+                if ('paint' in layer) {
+                    if (layer.type == 'fill') {
+                        r.fill = layer['paint']['fill-color'];
+                        r.fillOpacity = layer['paint']['fill-opacity'];
+                    }
+                    if (layer.type == 'line') {
+                        r.stroke = layer['paint']['line-color'];
+                        if ('line-width' in layer['paint']) {
+                            r.strokeWidth = layer['paint']['line-width']['base'];
+                        }
+                        r.strokeOpacity = layer['paint']['line-opacity'];
+                    }
+                }
+                styles.push(r);
+            }
+            return styles;
+        },
+        filter: (properties, geometry) => {
+            properties.mapboxLayer = [];
+            for (const layer of mapboxLayers) {
+                if (properties.vt_layer !== layer['source-layer']) {
+                    continue;
+                }
+                if ('filter' in layer) {
+                    let filteredOut = false;
+                    for (let i = 0; i < layer['filter'].length; i++) {
+                        const filter = layer['filter'][i];
 
+                        if (filter.length === undefined) {
+                            continue;
+                        }
+                        if (filter[0] == '==') {
+                            if (filter[1] == '$type') {
+                                filteredOut |= (filter[2] != geometry.type);
+                            }
+                            else if (filter[1] in properties) {
+                                filteredOut |= (properties[filter[1]] != filter[2]);
+                            }
+                        }
+                        else if (filter[0] == 'in') {
+                            filteredOut |= (filter.slice(2).indexOf(properties[filter[1]]) == -1);
+                        }
+                        if (filteredOut) {
+                            break;
+                        }
+                    }
+                    if (!filteredOut) {
+                        properties.mapboxLayer.push(layer);
+                    }
+                } else {
+                    properties.mapboxLayer.push(layer);
+                }
+            }
+            return properties.mapboxLayer.length > 0;
+        },
+    });
+});
 
-
-            promises.push(itowns.Fetcher.json('examples/layers/JSONLayers/WORLD_DTM.json').then(addLayerCb));
-            promises.push(itowns.Fetcher.json('examples/layers/JSONLayers/IGN_MNT_HIGHRES.json').then(addLayerCb));
 
             menuGlobe.addGUI('RealisticLighting', false,
                 function(newValue) { globeView.setRealisticLightingOn(newValue); });
