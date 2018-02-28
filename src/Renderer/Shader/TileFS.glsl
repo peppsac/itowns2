@@ -61,7 +61,6 @@ uniform int  uuid;
 
 void main() {
     #include <logdepthbuf_fragment>
-
     #if defined(MATTE_ID_MODE)
         gl_FragColor = packDepthToRGBA(float(uuid) / (256.0 * 256.0 * 256.0));
     #elif defined(DEPTH_MODE)
@@ -72,6 +71,10 @@ void main() {
         #endif
         gl_FragColor = packDepthToRGBA(z);
     #else
+    if (loadedTexturesCount[1] == 0) {
+        gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+        discard;
+    }
 
 
     #if defined(DEBUG)
@@ -134,6 +137,10 @@ void main() {
                             offsetScale_L01,
                             textureIndex,
                             projWGS84 ? vUv_WGS84 : uvPM);
+
+                        gl_FragColor = layerColor;
+                        gl_FragColor *= opacity;
+                        return;
 
                         if (layerColor.a > 0.0 && paramsA.w > 0.0) {
                             validTexture = true;

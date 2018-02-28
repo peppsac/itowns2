@@ -9,17 +9,17 @@ import OGCWebServiceHelper, { SIZE_TEXTURE_TILE } from '../Core/Scheduler/Provid
 const MAX_RETRY = 4;
 
 function initNodeImageryTexturesFromParent(node, parent, layer) {
-    if (parent.material && parent.material.getColorLayerLevelById(layer.id) > EMPTY_TEXTURE_ZOOM) {
+    if (parent.material && parent.material[layer.sequence].getColorLayerLevelById(layer.id) > EMPTY_TEXTURE_ZOOM) {
         const coords = node.getCoordsForLayer(layer);
-        const offsetTextures = node.material.getLayerTextureOffset(layer.id);
+        const offsetTextures = node.material[layer.sequence].getLayerTextureOffset(layer.id);
 
         let textureIndex = offsetTextures;
         for (const c of coords) {
-            for (const texture of parent.material.getLayerTextures(l_COLOR, layer.id)) {
+            for (const texture of parent.material[layer.sequence].getLayerTextures(l_COLOR, layer.id)) {
                 if (c.isInside(texture.coords)) {
                     const result = c.offsetToParent(texture.coords);
-                    node.material.textures[l_COLOR][textureIndex] = texture;
-                    node.material.offsetScale[l_COLOR][textureIndex] = result;
+                    node.material[layer.sequence].textures[l_COLOR][textureIndex] = texture;
+                    node.material[layer.sequence].offsetScale[l_COLOR][textureIndex] = result;
                     textureIndex++;
                     break;
                 }
@@ -33,9 +33,9 @@ function initNodeImageryTexturesFromParent(node, parent, layer) {
                 /* eslint-enable */
             }
         }
-        const index = node.material.indexOfColorLayer(layer.id);
-        node.material.layerTexturesCount[index] = coords.length;
-        node.material.loadedTexturesCount[l_COLOR] += coords.length;
+        const index = node.material[layer.sequence].indexOfColorLayer(layer.id);
+        node.material[layer.sequence].layerTexturesCount[index] = coords.length;
+        node.material[layer.sequence].loadedTexturesCount[l_COLOR] += coords.length;
     }
 }
 
@@ -44,11 +44,11 @@ function initNodeElevationTextureFromParent(node, parent, layer) {
     // node might not be EMPTY_TEXTURE_ZOOM in this init function. That's because we can have
     // multiple elevation layers (thus multiple calls to initNodeElevationTextureFromParent) but a given
     // node can only use 1 elevation texture
-    if (parent.material && parent.material.getElevationLayerLevel() > node.material.getElevationLayerLevel()) {
+    if (parent.material && parent.material[0].getElevationLayerLevel() > node.material[0].getElevationLayerLevel()) {
         const coords = node.getCoordsForLayer(layer);
 
-        const texture = parent.material.textures[l_ELEVATION][0];
-        const pitch = coords[0].offsetToParent(parent.material.textures[l_ELEVATION][0].coords);
+        const texture = parent.material[0].textures[l_ELEVATION][0];
+        const pitch = coords[0].offsetToParent(parent.material[0].textures[l_ELEVATION][0].coords);
         const elevation = {
             texture,
             pitch,
@@ -68,8 +68,8 @@ function initNodeElevationTextureFromParent(node, parent, layer) {
         }
 
         node.setTextureElevation(elevation);
-        node.material.elevationLayersId =
-            parent.material.elevationLayersId;
+        node.material[0].elevationLayersId =
+            parent.material[0].elevationLayersId;
     }
 }
 
@@ -84,10 +84,10 @@ function getIndiceWithPitch(i, pitch, w) {
 }
 
 function insertSignificantValuesFromParent(texture, node, parent, layer) {
-    if (parent.material && parent.material.getElevationLayerLevel() > EMPTY_TEXTURE_ZOOM) {
+    if (parent.material && parent.material[0].getElevationLayerLevel() > EMPTY_TEXTURE_ZOOM) {
         const coords = node.getCoordsForLayer(layer);
-        const textureParent = parent.material.textures[l_ELEVATION][0];
-        const pitch = coords[0].offsetToParent(parent.material.textures[l_ELEVATION][0].coords);
+        const textureParent = parent.material[0].textures[l_ELEVATION][0];
+        const pitch = coords[0].offsetToParent(parent.material[0].textures[l_ELEVATION][0].coords);
         const tData = texture.image.data;
         const l = tData.length;
 
@@ -124,7 +124,7 @@ function refinementCommandCancellationFn(cmd) {
     // This is only needed for elevation layers, because we may have several
     // concurrent layers but we can only use one texture.
     if (cmd.layer.type == 'elevation' &&
-        cmd.targetLevel <= cmd.requester.material.getElevationLayerLevel()) {
+        cmd.targetLevel <= cmd.requester.material[0].getElevationLayerLevel()) {
         return true;
     }
 
@@ -146,7 +146,8 @@ export function updateLayeredMaterialNodeImagery(context, layer, node) {
         return;
     }
 
-    const material = node.material;
+    const material = node.material[layer.sequence];
+    material.renderOrder = 1 + layer.sequence;
 
     // Initialisation
     if (node.layerUpdateState[layer.id] === undefined) {
@@ -199,8 +200,10 @@ export function updateLayeredMaterialNodeImagery(context, layer, node) {
     // to avoid mixing layer's network updates and layer's params
     // Update material parameters
     const layerIndex = material.indexOfColorLayer(layer.id);
-    material.setLayerVisibility(layerIndex, layer.visible);
-    material.setLayerOpacity(layerIndex, layer.opacity);
+    material.visible = layer.visible; // setLayerVisibility(layerIndex, layer.visible);
+    material.uniforms.opacity.value = layer.opacity; // setLayerOpacity(layerIndex, layer.opacity);
+    material.transparent = false;//layer.transparent || layer.opacity < 1;
+    material.premultipliedAlpha = true;
 
     const ts = Date.now();
     // An update is pending / or impossible -> abort
@@ -227,7 +230,7 @@ export function updateLayeredMaterialNodeImagery(context, layer, node) {
         return;
     }
 
-    const currentLevel = node.material.getColorLayerLevelById(layer.id);
+    const currentLevel = node.material[layer.sequence].getColorLayerLevelById(layer.id);
     const zoom = node.getCoordsForLayer(layer)[0].zoom || node.level;
     const targetLevel = chooseNextLevelToFetch(layer.updateStrategy.type, node, zoom, currentLevel, layer);
     if (targetLevel <= currentLevel) {
@@ -252,9 +255,9 @@ export function updateLayeredMaterialNodeImagery(context, layer, node) {
             }
 
             if (Array.isArray(result)) {
-                node.setTexturesLayer(result, l_COLOR, layer.id);
+                node.setTexturesLayer(result, l_COLOR, layer.id, layer.sequence);
             } else if (result.texture) {
-                node.setTexturesLayer([result], l_COLOR, layer.id);
+                node.setTexturesLayer([result], l_COLOR, layer.id, layer.sequence);
             } else {
                 // TODO: null texture is probably an error
                 // Maybe add an error counter for the node/layer,
@@ -295,7 +298,7 @@ export function updateLayeredMaterialNodeElevation(context, layer, node) {
     // Elevation is currently handled differently from color layers.
     // This is caused by a LayeredMaterial limitation: only 1 elevation texture
     // can be used (where a tile can have N textures x M layers)
-    const material = node.material;
+    const material = node.material[0];
     let currentElevation = material.getElevationLayerLevel();
 
     // Init elevation layer, and inherit from parent if possible
@@ -358,7 +361,7 @@ export function updateLayeredMaterialNodeElevation(context, layer, node) {
             // Do not apply the new texture if its level is < than the current one.
             // This is only needed for elevation layers, because we may have several
             // concurrent layers but we can only use one texture.
-            if (targetLevel <= node.material.getElevationLayerLevel()) {
+            if (targetLevel <= node.material[0].getElevationLayerLevel()) {
                 node.layerUpdateState[layer.id].noMoreUpdatePossible();
                 return;
             }

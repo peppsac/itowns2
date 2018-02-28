@@ -62,6 +62,10 @@ function executeCommand(command) {
 
         geometry = new TileGeometry(paramsGeometry, builder);
         cacheGeometry.set(key, geometry);
+        for (let i = 0; i<10; i++) {
+            geometry.addGroup(0, geometry.index.count, i);
+            geometry.groups[i].renderOrder = i + 1;
+        }
 
         geometry._count = 0;
         geometry.dispose = () => {
@@ -97,8 +101,9 @@ function executeCommand(command) {
     tile.position.copy(position);
     tile.quaternion.copy(quaternion);
 
-    tile.material.transparent = layer.opacity < 1.0;
-    tile.material.uniforms.opacity.value = layer.opacity;
+    // tile.material[layer.sequence].transparent = layer.opacity < 1.0;
+    // tile.material[layer.sequence].uniforms.opacity.value = layer.opacity;
+
     tile.setVisibility(false);
     tile.updateMatrix();
 

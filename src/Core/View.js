@@ -165,16 +165,17 @@ function _preprocessLayer(view, layer, provider, parentLayer) {
         defineLayerProperty(layer, 'visible', true, () => _syncGeometryLayerVisibility(layer, view));
         _syncGeometryLayerVisibility(layer, view);
 
-        const changeOpacity = (o) => {
-            if (o.material) {
+        const changeOpacity = (o, seq) => {
+            if (o.material && o.material.length) {
+                const m = o.material[seq];
                 // != undefined: we want the test to pass if opacity is 0
-                if (o.material.opacity != undefined) {
-                    o.material.transparent = layer.opacity < 1.0;
-                    o.material.opacity = layer.opacity;
+                if (m.opacity != undefined) {
+                    m.transparent = layer.opacity < 1.0;
+                    m.opacity = layer.opacity;
                 }
-                if (o.material.uniforms && o.material.uniforms.opacity != undefined) {
-                    o.material.transparent = layer.opacity < 1.0;
-                    o.material.uniforms.opacity.value = layer.opacity;
+                if (m.uniforms && m.uniforms.opacity != undefined) {
+                    m.transparent = layer.opacity < 1.0;
+                    m.uniforms.opacity.value = layer.opacity;
                 }
             }
         };
@@ -184,10 +185,10 @@ function _preprocessLayer(view, layer, provider, parentLayer) {
                     if (o.layer !== layer.id) {
                         return;
                     }
-                    changeOpacity(o);
+                    changeOpacity(o, layer.sequence);
                     // 3dtiles layers store scenes in children's content property
                     if (o.content) {
-                        o.content.traverse(changeOpacity);
+                        o.content.traverse((n) => changeOpacity(n, layer.sequence));
                     }
                 });
             }

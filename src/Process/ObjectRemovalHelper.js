@@ -26,6 +26,7 @@ export default {
      * @return {Array} an array of removed Object3D from obj (not including the recursive removals)
      */
     removeChildren(layerId, obj) {
+        return [];
         const toRemove = obj.children.filter(c => c.layer === layerId);
         obj.remove(...toRemove);
         return toRemove;

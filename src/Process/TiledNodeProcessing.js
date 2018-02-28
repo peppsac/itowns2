@@ -73,16 +73,16 @@ function subdivideNode(context, layer, node) {
                 node.add(child);
                 child.updateMatrixWorld(true);
 
-                child.material.uniforms.lightPosition.value =
-                    node.material.uniforms.lightPosition.value;
-                child.material.uniforms.lightingEnabled.value =
-                    node.material.uniforms.lightingEnabled.value;
+                child.material[0].uniforms.lightPosition.value =
+                    node.material[0].uniforms.lightPosition.value;
+                child.material[0].uniforms.lightingEnabled.value =
+                    node.material[0].uniforms.lightingEnabled.value;
             }
             // TODO
             /*
-              if (child.material.elevationLayersId.length) {
+              if (child.material[0].elevationLayersId.length) {
                 // need to force update elevation when delta is important
-                if (child.level - child.material.getElevationLayerLevel() > 6) {
+                if (child.level - child.material[0].getElevationLayerLevel() > 6) {
                     updateNodeElevation(_this.scene, params.tree, child, params.layersConfig, true);
                 }
             }
@@ -126,7 +126,7 @@ export function processTiledGeometryNode(cullingTest, subdivisionTest) {
                 node.setDisplayed(true);
             }
 
-            if (node.material.visible) {
+            if (node.material[0].visible) {
                 // update uniforms
                 if (context.view.fogDistance != undefined) {
                     node.setFog(context.view.fogDistance);

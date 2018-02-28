@@ -75,15 +75,15 @@ export const GLOBE_VIEW_EVENTS = {
 export function createGlobeLayer(id, options) {
     // Configure tiles
     const nodeInitFn = function nodeInitFn(layer, parent, node) {
-        node.material.setLightingOn(layer.lighting.enable);
-        node.material.uniforms.lightPosition.value = layer.lighting.position;
+        node.material[0].setLightingOn(layer.lighting.enable);
+        node.material[0].uniforms.lightPosition.value = layer.lighting.position;
         if (layer.noTextureColor) {
-            node.material.uniforms.noTextureColor.value.copy(layer.noTextureColor);
+            node.material[0].uniforms.noTextureColor.value.copy(layer.noTextureColor);
         }
 
         if (__DEBUG__) {
-            node.material.uniforms.showOutline = { value: layer.showOutline || false };
-            node.material.wireframe = layer.wireframe || false;
+            node.material[0].uniforms.showOutline = { value: layer.showOutline || false };
+            // node.material[0].wireframe = layer.wireframe || false;
         }
     };
 
@@ -478,11 +478,11 @@ GlobeView.prototype.setLightingPos = function setLightingPos(pos) {
 GlobeView.prototype.updateMaterialUniform = function updateMaterialUniform(uniformName, value) {
     for (const n of this.wgs84TileLayer.level0Nodes) {
         n.traverse((obj) => {
-            if (!obj.material || !obj.material.uniforms) {
+            if (!obj.material || !obj.material[0].uniforms) {
                 return;
             }
-            if (uniformName in obj.material.uniforms) {
-                obj.material.uniforms[uniformName].value = value;
+            if (uniformName in obj.material[0].uniforms) {
+                obj.material[0].uniforms[uniformName].value = value;
             }
         });
     }
