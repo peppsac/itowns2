@@ -86,6 +86,28 @@
                 }
             }
 
+            .tooltip {
+                display: none;
+                background-image: linear-gradient(rgba(80, 80, 80,0.95), rgba(60, 60, 60,0.95));
+                box-shadow: -1px 2px 5px 1px rgba(0, 0, 0, 0.5);
+                margin-top: 20px;
+                margin-left: 20px;
+                padding: 10px;
+                position: absolute;
+                z-index: 1000;
+                color: #CECECE;
+                font-family: 'Open Sans',
+                sans-serif;
+                font-size: 14px;
+                line-height: 18px;
+                text-align: left;
+            }
+
+            .measure {
+                position: absolute;
+                display: none;
+            }
+
         </style>
 
         <meta charset="UTF-8">
@@ -96,8 +118,10 @@
     <body>
         <div id="viewerDiv">
             <div id="info"></div>
+            <div id="measure" class="measure"></div>
+            <div id="measure_z" class="measure"></div>
+            <div id="measure_xy" class="measure"></div>
         </div>
-
         <div class="centered">
             <div id="lopocs"> </div>
             <div id="itowns"> </div>

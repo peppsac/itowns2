@@ -6,43 +6,20 @@ import { MAIN_LOOP_EVENTS } from '../../Core/MainLoop';
 // Especially the existing controls are expecting a continuous update loop while we have a pausable one (so our controls use .notifyChange when needed)
 
 
-// Mouse movement handling
-function onDocumentMouseDown(event) {
-    event.preventDefault();
-    this._isMouseDown = true;
-
-    const coords = this.view.eventToViewCoords(event);
-    this._onMouseDownMouseX = coords.x;
-    this._onMouseDownMouseY = coords.y;
-
-    this._stateOnMouseDown = this._state.snapshot();
-}
+const MOVEMENTS = {
+    38: { method: 'translateZ', sign: -1 }, // FORWARD: up key
+    40: { method: 'translateZ', sign: 1 }, // BACKWARD: down key
+    37: { method: 'translateX', sign: -1 }, // STRAFE_LEFT: left key
+    39: { method: 'translateX', sign: 1 }, // STRAFE_RIGHT: right key
+    33: { method: 'translateY', sign: 1 }, // UP: PageUp key
+    34: { method: 'translateY', sign: -1 }, // DOWN: PageDown key
+};
 
 function limitRotation(camera3D, rot, verticalFOV) {
     // Limit vertical rotation (look up/down) to make sure the user cannot see
     // outside of the cone defined by verticalFOV
     const limit = THREE.Math.degToRad(verticalFOV - camera3D.fov) * 0.5;
     return THREE.Math.clamp(rot, -limit, limit);
-}
-
-function onPointerMove(event) {
-    if (this._isMouseDown === true) {
-        // in rigor we have tan(theta) = tan(cameraFOV) * deltaH / H
-        // (where deltaH is the vertical amount we moved, and H the renderer height)
-        // we loosely approximate tan(x) by x
-        const pxToAngleRatio = THREE.Math.degToRad(this.camera.fov) / this.view.mainLoop.gfxEngine.height;
-
-        const coords = this.view.eventToViewCoords(event);
-
-        // update state based on pointer movement
-        this._state.rotateY = ((coords.x - this._onMouseDownMouseX) * pxToAngleRatio) + this._stateOnMouseDown.rotateY;
-        this._state.rotateX = limitRotation(
-            this.camera,
-            ((coords.y - this._onMouseDownMouseY) * pxToAngleRatio) + this._stateOnMouseDown.rotateX,
-        this.options.verticalFOV);
-
-        applyRotation(this.view, this.camera, this._state);
-    }
 }
 
 function applyRotation(view, camera3D, state) {
@@ -53,62 +30,6 @@ function applyRotation(view, camera3D, state) {
     camera3D.rotateX(state.rotateX);
 
     view.notifyChange(true, camera3D);
-}
-
-// Mouse wheel
-function onDocumentMouseWheel(event) {
-    let delta = 0;
-    if (event.wheelDelta !== undefined) {
-        delta = -event.wheelDelta;
-    // Firefox
-    } else if (event.detail !== undefined) {
-        delta = event.detail;
-    }
-
-    this.camera.fov =
-        THREE.Math.clamp(this.camera.fov + Math.sign(delta),
-            10,
-            Math.min(100, this.options.verticalFOV));
-
-    this.camera.updateProjectionMatrix();
-
-    this._state.rotateX = limitRotation(
-        this.camera,
-        this._state.rotateX,
-        this.options.verticalFOV);
-
-    applyRotation(this.view, this.camera, this._state);
-}
-
-function onDocumentMouseUp() {
-    this._isMouseDown = false;
-}
-
-const MOVEMENTS = {
-    38: { method: 'translateZ', sign: -1 }, // FORWARD: up key
-    40: { method: 'translateZ', sign: 1 }, // BACKWARD: down key
-    37: { method: 'translateX', sign: -1 }, // STRAFE_LEFT: left key
-    39: { method: 'translateX', sign: 1 }, // STRAFE_RIGHT: right key
-    33: { method: 'translateY', sign: 1 }, // UP: PageUp key
-    34: { method: 'translateY', sign: -1 }, // DOWN: PageDown key
-};
-// Keyboard handling
-function onKeyUp(e) {
-    const move = MOVEMENTS[e.keyCode];
-    if (move) {
-        this.moves.delete(move);
-        this.view.notifyChange(true);
-        e.preventDefault();
-    }
-}
-
-function onKeyDown(e) {
-    const move = MOVEMENTS[e.keyCode];
-    if (move) {
-        this.moves.add(move);
-        this.view.notifyChange(false);
-        e.preventDefault();
-    }
 }
 
 class FirstPersonControls extends THREE.EventDispatcher {
@@ -164,18 +85,18 @@ class FirstPersonControls extends THREE.EventDispatcher {
         };
 
         const domElement = view.mainLoop.gfxEngine.renderer.domElement;
-        const bindedPD = onDocumentMouseDown.bind(this);
-        domElement.addEventListener('mousedown', bindedPD, false);
-        domElement.addEventListener('touchstart', bindedPD, false);
-        const bindedPM = onPointerMove.bind(this);
-        domElement.addEventListener('mousemove', bindedPM, false);
-        domElement.addEventListener('touchmove', bindedPM, false);
-        domElement.addEventListener('mouseup', onDocumentMouseUp.bind(this), false);
-        domElement.addEventListener('touchend', onDocumentMouseUp.bind(this), false);
-        domElement.addEventListener('keyup', onKeyUp.bind(this), true);
-        domElement.addEventListener('keydown', onKeyDown.bind(this), true);
-        domElement.addEventListener('mousewheel', onDocumentMouseWheel.bind(this), false);
-        domElement.addEventListener('DOMMouseScroll', onDocumentMouseWheel.bind(this), false); // firefox
+        if (!options.disableEventListeners) {
+            domElement.addEventListener('mousedown', this.onMouseDown.bind(this), false);
+            domElement.addEventListener('touchstart', this.onMouseDown.bind(this), false);
+            domElement.addEventListener('mousemove', this.onMouseMove.bind(this), false);
+            domElement.addEventListener('touchmove', this.onMouseMove.bind(this), false);
+            domElement.addEventListener('mouseup', this.onMouseUp.bind(this), false);
+            domElement.addEventListener('touchend', this.onMouseUp.bind(this), false);
+            domElement.addEventListener('keyup', this.onKeyUp.bind(this), true);
+            domElement.addEventListener('keydown', this.onKeyDown.bind(this), true);
+            domElement.addEventListener('mousewheel', this.onMouseWheel.bind(this), false);
+            domElement.addEventListener('DOMMouseScroll', this.onMouseWheel.bind(this), false); // firefox
+        }
 
         this.view.addFrameRequester(MAIN_LOOP_EVENTS.AFTER_CAMERA_UPDATE, this.update.bind(this));
 
@@ -210,6 +131,87 @@ class FirstPersonControls extends THREE.EventDispatcher {
 
         if (this.moves.size || this._isMouseDown) {
             this.view.notifyChange(true);
+        }
+    }
+
+    // Event callback functions
+    // Mouse movement handling
+    onMouseDown(event) {
+        event.preventDefault();
+        this._isMouseDown = true;
+
+        const coords = this.view.eventToViewCoords(event);
+        this._onMouseDownMouseX = coords.x;
+        this._onMouseDownMouseY = coords.y;
+
+        this._stateOnMouseDown = this._state.snapshot();
+    }
+
+    onMouseMove(event) {
+        if (this._isMouseDown === true) {
+            // in rigor we have tan(theta) = tan(cameraFOV) * deltaH / H
+            // (where deltaH is the vertical amount we moved, and H the renderer height)
+            // we loosely approximate tan(x) by x
+            const pxToAngleRatio = THREE.Math.degToRad(this.camera.fov) / this.view.mainLoop.gfxEngine.height;
+
+            const coords = this.view.eventToViewCoords(event);
+
+            // update state based on pointer movement
+            this._state.rotateY = ((coords.x - this._onMouseDownMouseX) * pxToAngleRatio) + this._stateOnMouseDown.rotateY;
+            this._state.rotateX = limitRotation(
+                this.camera,
+                ((coords.y - this._onMouseDownMouseY) * pxToAngleRatio) + this._stateOnMouseDown.rotateX,
+            this.options.verticalFOV);
+
+            applyRotation(this.view, this.camera, this._state);
+        }
+    }
+
+    // Mouse wheel
+    onMouseWheel(event) {
+        let delta = 0;
+        if (event.wheelDelta !== undefined) {
+            delta = -event.wheelDelta;
+        // Firefox
+        } else if (event.detail !== undefined) {
+            delta = event.detail;
+        }
+
+        this.camera.fov =
+            THREE.Math.clamp(this.camera.fov + Math.sign(delta),
+                10,
+                Math.min(100, this.options.verticalFOV));
+
+        this.camera.updateProjectionMatrix();
+
+        this._state.rotateX = limitRotation(
+            this.camera,
+            this._state.rotateX,
+            this.options.verticalFOV);
+
+        applyRotation(this.view, this.camera, this._state);
+    }
+
+    onMouseUp() {
+        this._isMouseDown = false;
+    }
+
+    // Keyboard handling
+    onKeyUp(e) {
+        const move = MOVEMENTS[e.keyCode];
+        if (move) {
+            this.moves.delete(move);
+            this.view.notifyChange(true);
+            e.preventDefault();
+        }
+    }
+
+    onKeyDown(e) {
+        const move = MOVEMENTS[e.keyCode];
+        if (move) {
+            this.moves.add(move);
+            this.view.notifyChange(false);
+            e.preventDefault();
         }
     }
 }
