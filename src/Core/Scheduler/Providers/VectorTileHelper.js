@@ -120,9 +120,9 @@ const getVectorTileTextureByUrl = function getVectorTileTextureByUrl(url, tile, 
     return getVectorTileGeoJSONByUrl(url, tile, layer, coords).then((geojson) => {
         if (!geojson) return;
 
-        const features = GeoJSON2Features.parse(tile.extent.crs(), geojson,
-            layer.extent, { filter: layer.filter, buildExtent: true });
-
+        return GeoJSON2Features.parse(tile.extent.crs(), geojson,
+            layer.extent, { filter: layer.filter, buildExtent: true, mapboxLayers: layer.mapboxLayers });
+    }).then((features) => {
         if (!features) {
             return;
         }

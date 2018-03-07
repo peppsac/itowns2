@@ -87,7 +87,7 @@ function featureFilter(properties) {
 const mapboxLayers = [];
 
 let count = 0;
-itowns.Fetcher.json('http://localhost:8080/style.json').then((style) => {
+itowns.Fetcher.json('https://raw.githubusercontent.com/Oslandia/postile-openmaptiles/master/style.json').then((style) => {
     view.tileLayer.noTextureColor =
     new itowns.THREE.Color(style['layers'][0]['paint']['background-color']);
     // add one layer per layer in style.json
@@ -100,6 +100,7 @@ itowns.Fetcher.json('http://localhost:8080/style.json').then((style) => {
 
 
     view.addLayer({
+        mapboxLayers,
         type: 'color',
         protocol: 'xyz',
         id: 'MVT',
@@ -144,7 +145,7 @@ itowns.Fetcher.json('http://localhost:8080/style.json').then((style) => {
             }
             return styles;
         },
-        filter: (properties, geometry) => {
+        filter: (properties, geometry, mapboxLayers) => {
             properties.mapboxLayer = [];
             for (const layer of mapboxLayers) {
                 if (properties.vt_layer !== layer['source-layer']) {

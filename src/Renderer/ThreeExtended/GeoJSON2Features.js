@@ -3,244 +3,97 @@
  * Class: FeatureToolBox
  * Description:
  */
-import Coordinates from '../../Core/Geographic/Coordinates';
+import * as Implem from './GeoJSON2FeaturesImplementation';
 import Extent from '../../Core/Geographic/Extent';
+import MyWorker from 'file./../../workers/Worker.js';
 
-function readCRS(json) {
-    if (json.crs) {
-        if (json.crs.type.toLowerCase() == 'epsg') {
-            return `EPSG:${json.crs.properties.code}`;
-        } else if (json.crs.type.toLowerCase() == 'name') {
-            const epsgIdx = json.crs.properties.name.toLowerCase().indexOf('epsg:');
-            if (epsgIdx >= 0) {
-                // authority:version:code => EPSG:[...]:code
-                const codeStart = json.crs.properties.name.indexOf(':', epsgIdx + 5);
-                if (codeStart > 0) {
-                    return `EPSG:${json.crs.properties.name.substr(codeStart + 1)}`;
-                }
+const myWorker = new MyWorker();
+const pendingPromises = [];
+
+function fixExtent(obj) {
+    for (let e in obj) {
+        if (e == 'extent') {
+            obj[e] = new Extent(obj[e]._crs, ...obj[e]._values);
+        } else if (e == 'geometries') {
+            for (let i = 0; i < obj[e].length; i++) {
+                fixExtent(obj[e][i]);
+            }
+        } else if (e == 'featureVertices') {
+            for (let f in obj[e]) {
+                fixExtent(obj[e][f]);
             }
         }
-        throw new Error(`Unsupported CRS type '${json.crs}'`);
     }
-    // assume default crs
-    return 'EPSG:4326';
 }
 
-const coords = new Coordinates('EPSG:4978', 0, 0, 0);
-function readCoordinates(crsIn, crsOut, coordinates, extent) {
-    // coordinates is a list of pair [[x1, y1], [x2, y2], ..., [xn, yn]]
-    const out = new Array(coordinates.length);
-    let i = 0;
-    for (const pair of coordinates) {
-        // TODO: 1 is a default z value, makes this configurable
-        if (crsIn === crsOut) {
-            out[i] = new Coordinates(crsIn, pair[0], pair[1], 1);
-        } else {
-            coords.set(crsIn, pair[0], pair[1], 1);
-            out[i] = coords.as(crsOut);
-        }
-        // expand extent if present
-        if (extent) {
-            extent.expandByPoint(out[i]);
-        }
-        ++i;
-    }
-    return out;
-}
+myWorker.onmessage = (evt) => {
+    for (let i = 0; i<pendingPromises.length; i++) {
+        if (pendingPromises[i]._id === evt.data.promiseId) {
+            // modify all extent...
+            fixExtent(evt.data.features);
 
-// Helper struct that returns an object { type: "", coordinates: [...], extent}:
-// - type is the geom type
-// - Coordinates is an array of Coordinate
-// - extent is optional, it's coordinates's extent
-// Multi-* geometry types are merged in one.
-const GeometryToCoordinates = {
-    point(crsIn, crsOut, coordsIn, filteringExtent, options) {
-        const extent = options.buildExtent ? new Extent(crsOut, Infinity, -Infinity, Infinity, -Infinity) : undefined;
-        let coordinates = readCoordinates(crsIn, crsOut, coordsIn, extent);
-        if (filteringExtent) {
-            coordinates = coordinates.filter(c => filteringExtent.isPointInside(c));
-        }
-        return { type: 'point', coordinates, extent };
-    },
-    polygon(crsIn, crsOut, coordsIn, filteringExtent, options) {
-        const extent = options.buildExtent ? new Extent(crsOut, Infinity, -Infinity, Infinity, -Infinity) : undefined;
-        const coordinates = readCoordinates(crsIn, crsOut, coordsIn, extent);
-        if (filteringExtent && !filteringExtent.isPointInside(coordinates[0])) {
+            pendingPromises[i].foobar.resolve(evt.data.features);
+            pendingPromises.splice(i, 1);
             return;
         }
-        return { type: 'polygon', coordinates, extent };
-    },
-    lineString(crsIn, crsOut, coordsIn, filteringExtent, options) {
-        const extent = options.buildExtent ? new Extent(crsOut, Infinity, -Infinity, Infinity, -Infinity) : undefined;
-        const coordinates = readCoordinates(crsIn, crsOut, coordsIn, extent);
-        if (filteringExtent && !filteringExtent.isPointInside(coordinates[0])) {
-            return;
-        }
-        return { type: 'linestring', coordinates, extent };
-    },
-    merge(...geoms) {
-        let result;
-        let offset = 0;
-        for (const geom of geoms) {
-            if (!geom) {
-                continue;
-            }
-            if (!result) {
-                result = geom;
-                // instance extent if present
-                if (geom.extent) {
-                    result.extent = geom.extent.clone();
-                }
-                result.featureVertices = {};
-            } else {
-                // merge coordinates
-                for (const coordinate of geom.coordinates) {
-                    result.coordinates.push(coordinate);
-                }
-                // union extent if present
-                if (geom.extent) {
-                    result.extent.union(geom.extent);
-                }
-            }
-            result.featureVertices[geom.featureIndex || 0] = { offset, count: geom.coordinates.length, extent: geom.extent };
-            offset = result.coordinates.length;
-        }
-        return result;
-    },
-    multiLineString(crsIn, crsOut, coordsIn, filteringExtent, options) {
-        let result;
-        for (const line of coordsIn) {
-            const l = this.lineString(crsIn, crsOut, line, filteringExtent, options);
-            if (!l) {
-                return;
-            }
-            // only test the first line
-            filteringExtent = undefined;
-            result = this.merge(result, l);
-        }
-        return result;
-    },
-    multiPolygon(crsIn, crsOut, coordsIn, filteringExtent, options) {
-        let result;
-        for (const polygon of coordsIn) {
-            const p = this.polygon(crsIn, crsOut, polygon[0], filteringExtent, options);
-            if (!p) {
-                return;
-            }
-            // only test the first poly
-            filteringExtent = undefined;
-            result = this.merge(result, p);
-        }
-        return result;
-    },
+    }
 };
 
-function readGeometry(crsIn, crsOut, json, filteringExtent, options) {
-    if (json.coordinates.length == 0) {
-        return;
-    }
-    switch (json.type.toLowerCase()) {
-        case 'point':
-            return GeometryToCoordinates.point(crsIn, crsOut, [json.coordinates], filteringExtent, options);
-        case 'multipoint':
-            return GeometryToCoordinates.point(crsIn, crsOut, json.coordinates, filteringExtent, options);
-        case 'linestring':
-            return GeometryToCoordinates.lineString(crsIn, crsOut, json.coordinates, filteringExtent, options);
-        case 'multilinestring':
-            return GeometryToCoordinates.multiLineString(crsIn, crsOut, json.coordinates, filteringExtent, options);
-        case 'polygon':
-            return GeometryToCoordinates.polygon(crsIn, crsOut, json.coordinates[0], filteringExtent, options);
-        case 'multipolygon':
-            return GeometryToCoordinates.multiPolygon(crsIn, crsOut, json.coordinates, filteringExtent, options);
-        case 'geometrycollection':
-        default:
-            throw new Error(`Unhandled geometry type ${json.type}`);
-    }
+function passFunctionToWorker(func) {
+    const funcStr = func.toString()
+
+    //Get the name of the argument. We know there is a single argument
+    //in the worker function, between the first '(' and the first ')'.
+    const argNames = funcStr.substring(
+        funcStr.indexOf("(") + 1, funcStr.indexOf(")")).split(',');
+
+    //Now get the function body - between the first '{' and the last '}'.
+    const body = funcStr.substring(funcStr.indexOf("{") + 1, funcStr.lastIndexOf("}"));
+    return {
+        argNames,
+        body,
+    };
 }
 
-function readFeature(crsIn, crsOut, json, filteringExtent, options) {
-    const feature = {};
-
-    if (options.filter && !options.filter(json.properties, json.geometry)) {
-        return;
-    }
-    feature.geometry = readGeometry(crsIn, crsOut, json.geometry, filteringExtent, options);
-
-    if (!feature.geometry) {
-        return;
-    }
-    feature.properties = json.properties || {};
-    // copy other properties
-    for (const key of Object.keys(json)) {
-        if (['type', 'geometry', 'properties'].indexOf(key.toLowerCase()) < 0) {
-            feature.properties[key] = json[key];
-        }
-    }
-
-    return feature;
-}
-
-function concatGeometries(result, geometry) {
-    const idx = result.geometries.length;
-    geometry.forEach((f, index) => { f.properties._idx = index; f.properties._meshIdx = idx; });
-    const g = geometry.map(p => p.geometry);
-    const p = GeometryToCoordinates.merge(...g);
-    result.geometries.push(p);
-    if (p.extent) {
-        if (result.extent) {
-            result.extent.union(p.extent);
-        } else {
-            result.extent = p.extent.clone();
-        }
-    }
-}
-
-function readFeatureCollection(crsIn, crsOut, json, filteringExtent, options) {
-    const collec = [];
-
-    let featureIndex = 0;
-    for (const feature of json.features) {
-        const f = readFeature(crsIn, crsOut, feature, filteringExtent, options);
-        if (f) {
-            f.geometry.featureIndex = featureIndex;
-            collec.push(f);
-            featureIndex++;
-        }
-    }
-    if (collec.length) {
-        // sort by types
-        const geom = {
-            points: collec.filter(c => c.geometry.type === 'point'),
-            lines: collec.filter(c => c.geometry.type === 'linestring'),
-            polygons: collec.filter(c => c.geometry.type === 'polygon'),
-        };
-        const result = { geometries: [] };
-        if (geom.points.length) {
-            concatGeometries(result, geom.points);
-        }
-        if (geom.lines.length) {
-            concatGeometries(result, geom.lines);
-        }
-        if (geom.polygons.length) {
-            concatGeometries(result, geom.polygons);
-        }
-        // remember individual features properties
-        // eslint-disable-next-line arrow-body-style
-        result.features = collec.map((c) => { return { properties: c.properties }; });
-        if (result.geometries.length) {
-            return result;
-        }
-    }
-}
+let pId = 0;
 
 export default {
     parse(crsOut, json, filteringExtent, options = {}) {
-        options.crsIn = options.crsIn || readCRS(json);
+        if (typeof(options.style) == 'function') {
+            options.style = passFunctionToWorker(options.style);
+        }
+        if (typeof(options.filter) == 'function') {
+            options.filter = passFunctionToWorker(options.filter);
+        }
+
+        options.crsIn = options.crsIn || Implem.readCRS(json);
+
+        let foobar = {};
+        const p = new Promise((resolve, reject) => {
+            foobar.resolve = resolve;
+            foobar.reject = reject;
+        });
+        p.foobar = foobar;
+        p._id = pId++;
+        pendingPromises.push(p);
+        myWorker.postMessage(
+            {
+                promiseId: p._id,
+                crsIn: options.crsIn,
+                options,
+                crsOut,
+                json,
+                filteringExtent,
+                options
+            });
+
+        return p;
+
         switch (json.type.toLowerCase()) {
             case 'featurecollection':
-                return readFeatureCollection(options.crsIn, crsOut, json, filteringExtent, options);
+                return Promise.resolve(Implem.readFeatureCollection(options.crsIn, crsOut, json, filteringExtent, options));
             case 'feature':
-                return readFeature(options.crsIn, crsOut, json, filteringExtent, options);
+                return Promise.resolve(Implem.readFeature(options.crsIn, crsOut, json, filteringExtent, options));
             default:
                 throw new Error(`Unsupported GeoJSON type: '${json.type}`);
         }

@@ -59,6 +59,32 @@ module.exports = {
                     babelrc: false,
                 },
             },
+
+
+             {
+                test: /\.js$/,
+                enforce: 'pre',
+                include: [
+                    path.resolve(__dirname, 'workers'),
+                ],
+                loader: 'worker-loader',
+                  options: { publicPath: '/dist/' }
+            },
+            {
+                test: /\.js$/,
+                include: [
+                    path.resolve(__dirname, 'workers'),
+                ],
+                loader: 'babel-loader',
+                // Please consider modifying .babelrc too
+                // .babelrc is used for transpiling src/ into lib/ in the prepublish
+                // phase, see package.json
+                options: {
+                    presets: [['es2015', { modules: false } ]],
+                    plugins: ['transform-runtime'],
+                    babelrc: false,
+                },
+            },
             commonConfig.glslLoader,
             commonConfig.jsonLoader,
         ],
