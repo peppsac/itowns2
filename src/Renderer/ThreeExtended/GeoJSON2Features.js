@@ -80,7 +80,6 @@ const GeometryToCoordinates = {
     },
     merge(...geoms) {
         let result;
-        let offset = 0;
         for (const geom of geoms) {
             if (!geom) {
                 continue;
@@ -90,6 +89,10 @@ const GeometryToCoordinates = {
                 // instance extent if present
                 if (geom.extent) {
                     result.extent = geom.extent.clone();
+                }
+
+                if (result.featureVertices) {
+                    continue;
                 }
                 result.featureVertices = {};
             } else {
@@ -102,8 +105,21 @@ const GeometryToCoordinates = {
                     result.extent.union(geom.extent);
                 }
             }
-            result.featureVertices[geom.featureIndex || 0] = { offset, count: geom.coordinates.length, extent: geom.extent };
-            offset = result.coordinates.length;
+
+            const featureIndex = geom.featureIndex || 0;
+            if (featureIndex in result.featureVertices) {
+                result.featureVertices[featureIndex].push({
+                    offset: result.coordinates.length - geom.coordinates.length,
+                    count: geom.coordinates.length,
+                    extent: geom.extent,
+                });
+            } else {
+                result.featureVertices[featureIndex] = [{
+                    offset: result.coordinates.length - geom.coordinates.length,
+                    count: geom.coordinates.length,
+                    extent: geom.extent,
+                }];
+            }
         }
         return result;
     },

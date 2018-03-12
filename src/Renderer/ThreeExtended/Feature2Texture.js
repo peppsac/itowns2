@@ -74,14 +74,16 @@ function drawFeatureCollection(ctx, collection, origin, dimension, extent, style
         /* eslint-disable guard-for-in */
         if (features.extent.intersectsExtent(extent)) {
             for (const id in features.featureVertices) {
-                const polygon = features.featureVertices[id];
-                const properties = collection.features[id].properties;
-                const coordinates = features.coordinates.slice(polygon.offset, polygon.offset + polygon.count);
-                if (features.type === 'point') {
-                    drawPoint(ctx, coordinates[0], origin, dimension, style);
-                } else if (polygon.extent.intersectsExtent(extent)) {
-                    ctx.globalCompositeOperation = 'destination-over';
-                    drawPolygon(ctx, coordinates, origin, dimension, properties, style);
+                const polygons = features.featureVertices[id];
+                for (const polygon of polygons) {
+                    const properties = collection.features[id].properties;
+                    const coordinates = features.coordinates.slice(polygon.offset, polygon.offset + polygon.count);
+                    if (features.type === 'point') {
+                        drawPoint(ctx, coordinates[0], origin, dimension, style);
+                    } else if (polygon.extent.intersectsExtent(extent)) {
+                        ctx.globalCompositeOperation = 'destination-over';
+                        drawPolygon(ctx, coordinates, origin, dimension, properties, style);
+                    }
                 }
             }
         }
