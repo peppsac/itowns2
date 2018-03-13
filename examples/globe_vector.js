@@ -55,5 +55,31 @@ promises.push(globeView.addLayer({
     },
 }));
 
+promises.push(globeView.addLayer({
+    type: 'color',
+    url: './multipolygon.geojson',
+    protocol: 'rasterizer',
+    id: 'ariege2',
+    name: 'ariege',
+    transparent: true,
+    style: {
+        fill: 'yellow',
+        fillOpacity: 0.8,
+        stroke: 'black',
+    },
+}));
+
+itowns.Fetcher.json('./multipolygon.geojson')
+    .then(file => itowns.GeoJSON2Features.parse('EPSG:4978', file))
+    .then((feature) => {
+        const obj = itowns.Feature2Mesh.convert()(feature);
+        obj.children[0].material.depthTest = false;
+        obj.children[0].material.renderOrder = 10;
+        obj.children[0].material.wireframe = true;
+        //obj.children[0].material.side = itowns.THREE.DoubleSide;
+        globeView.scene.add(obj);
+        globeView.notifyChange(true);
+    });
+
 exports.view = globeView;
 exports.initialPosition = positionOnGlobe;

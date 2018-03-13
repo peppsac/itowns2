@@ -50,7 +50,10 @@ new itowns.PlanarControls(view, {});
 view.notifyChange(true);
 
 function setMaterialLineWidth(result) {
-    result.children[0].material.linewidth = 5;
+    var i;
+    for (i = 0; i < result.children.length; i++) {
+        result.children[i].material.linewidth = 5;
+    }
 }
 
 function colorLine(properties) {
@@ -175,3 +178,11 @@ view.addLayer({
     format: 'application/json',
 }, view.tileLayer);
 exports.view = view;
+
+viewerDiv.addEventListener('click', (evt) => {
+    const o = view.pickObjectsAt(evt, 'wfsBuilding');
+    if (o.length) {
+        o[0].object.material.color = new itowns.THREE.Color(0x333333);
+        view.notifyChange(true);
+    }
+})

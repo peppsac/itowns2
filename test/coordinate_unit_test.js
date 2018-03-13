@@ -14,7 +14,6 @@ function assertFloatEqual(float1, float2, precision = 5) {
 // Assert two coordinates obects are equals.
 function assertCoordEqual(coord1, coord2) {
     assert.equal(coord1.crs, coord2.crs);
-    assert.equal(coord1._internalStorageUnit, coord2._internalStorageUnit);
     assertFloatEqual(coord1._values[0], coord2._values[0]);
     assertFloatEqual(coord1._values[1], coord2._values[1]);
     assertFloatEqual(coord1._values[2], coord2._values[2]);
@@ -46,8 +45,7 @@ describe('Coordinate conversions', function () {
         var longIn = 4.82212;
         var latIn = 45.723722;
         // let's define an input coordinate EPSG:4326 in radian.
-        var coord1 = new Coordinates('EPSG:4326', longIn / 180 * Math.PI, latIn / 180 * Math.PI);
-        coord1._internalStorageUnit = UNIT.RADIAN;
+        var coord1 = new Coordinates('EPSG:4326:R', longIn / 180 * Math.PI, latIn / 180 * Math.PI);
         // convert coordinate in EPSG:3946
         var coord2 = coord1.as('EPSG:3946');
         // verify intermediate values
