@@ -130,7 +130,7 @@ class FirstPersonControls extends THREE.EventDispatcher {
         }
 
         if (this.moves.size || this._isMouseDown) {
-            this.view.notifyChange(true);
+            this.view.notifyChange(true, this.camera);
         }
     }
 

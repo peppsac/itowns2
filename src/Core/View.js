@@ -363,7 +363,11 @@ View.prototype.addLayer = function addLayer(layer, parentLayer) {
  * @param {*} changeSource
  */
 View.prototype.notifyChange = function notifyChange(needsRedraw, changeSource) {
-    this._changeSources.add(changeSource);
+    if (changeSource) {
+        this._changeSources.add(changeSource);
+    } else {
+        console.warn('->')
+    }
     this.mainLoop.scheduleViewUpdate(this, needsRedraw);
 };
 

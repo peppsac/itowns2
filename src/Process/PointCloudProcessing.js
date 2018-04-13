@@ -170,6 +170,7 @@ export default {
         }
 
         if (changeSources.has(undefined) || changeSources.size == 0) {
+            return [];
             return [layer.root];
         }
 

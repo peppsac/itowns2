@@ -41,7 +41,7 @@ function MeasureTool(view, pointcloud) {
                 lines[i].updateMatrixWorld();
                 lines[i].visible = true;
             }
-            view.notifyChange(true);
+            // view.notifyChange(true);
 
             this.firstPointSelected = true;
         } else {
@@ -247,7 +247,7 @@ function showPointcloud(serverUrl, fileName, lopocsTable) {
             measure.updateTooltipsPosition();
         });
 
-        view.notifyChange(true);
+        view.notifyChange(true, view.camera.camera3D);
     }
 
     // add pointcloud to scene
