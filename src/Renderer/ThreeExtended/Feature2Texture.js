@@ -20,6 +20,16 @@ function drawPolygon(ctx, vertices, contour, holes, origin, scale, properties, s
     if (vertices.length === 0) {
         return;
     }
+    if (style.length) {
+        for (const s of style) {
+            _drawPolygon(ctx, vertices, contour, holes, origin, scale, properties, s);
+        }
+    } else {
+        _drawPolygon(ctx, vertices, contour, holes, origin, scale, properties, style);
+    }
+}
+
+function _drawPolygon(ctx, vertices, contour, holes, origin, scale, properties, style) {
     // build contour
     ctx.beginPath();
     if (contour) {
@@ -78,6 +88,11 @@ function drawPoint(ctx, vertice, origin, scale, style = {}) {
 
 function _drawFeatureGeometry(ctx, feature, geometry, origin, scale, extent, style) {
     const properties = feature.properties;
+
+    if (typeof (style) == 'function') {
+        style = style(properties, feature);
+    }
+
     if (geometry.type === 'point') {
         drawPoint(ctx, geometry.vertices[0], origin, scale, style);
     } else if (geometry.extent.intersectsExtent(extent)) {
