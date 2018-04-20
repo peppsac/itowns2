@@ -2,7 +2,11 @@ import * as THREE from 'three';
 import OGCWebServiceHelper from './OGCWebServiceHelper';
 import URLBuilder from './URLBuilder';
 import Extent from '../Core/Geographic/Extent';
+<<<<<<< HEAD
 import { chooseExtentToDownload } from './WMTSProvider';
+=======
+import VectorTileHelper from './VectorTileHelper';
+>>>>>>> cdc4871b... feat(core): add vector tile loading in TMS
 
 function preprocessDataLayer(layer) {
     if (!layer.extent) {
@@ -23,6 +27,15 @@ function preprocessDataLayer(layer) {
             min: 0,
             max: 18,
         };
+    }
+    layer.fx = layer.fx || 0.0;
+}
+
+function getVectorTile(tile, coords, layer) {
+    const url = URLBuilder.xyz(coords, layer);
+
+    if (layer.type == 'color') {
+        return VectorTileHelper.getVectorTileTextureByUrl(url, tile, layer, coords);
     }
 }
 
@@ -65,19 +78,29 @@ function executeCommand(command) {
     const layer = command.layer;
 
     const promises = [];
-    for (const toDownload of command.toDownload) {
-        const urld = URLBuilder.xyz(toDownload.extent, layer);
+    const supportedFormats = {
+        'application/x-protobuf;type=mapbox-vector': getVectorTile.bind(this),
+    };
+    const func = supportedFormats[layer.format];
 
-        promises.push(OGCWebServiceHelper.getColorTextureByUrl(urld, layer.networkOptions).then((texture) => {
-            const result = {};
-            result.texture = texture;
-            result.texture.extent = toDownload.extent;
-            result.pitch = toDownload.pitch;
-            if (layer.transparent) {
-                texture.premultiplyAlpha = true;
-            }
-            return result;
-        }));
+    for (const toDownload of command.toDownload) {
+        if (func) {
+            // TODO
+            promises.push(func(tile, coordTMS, layer));
+        } else {
+            const urld = URLBuilder.xyz(toDownload.extent, layer);
+
+            promises.push(OGCWebServiceHelper.getColorTextureByUrl(urld, layer.networkOptions).then((texture) => {
+                const result = {};
+                result.texture = texture;
+                result.texture.coords = toDownload.extent;
+                result.pitch = toDownload.pitch;
+                if (layer.transparent) {
+                    texture.premultiplyAlpha = true;
+                }
+                return result;
+            }));
+        }
     }
     return Promise.all(promises);
 }
