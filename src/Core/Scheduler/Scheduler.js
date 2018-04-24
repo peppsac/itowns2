@@ -132,7 +132,7 @@ Scheduler.prototype.execute = function execute(command) {
 
     // parse host
     const layer = command.layer;
-    const host = layer.url ? new URL(layer.url, document.location).host : undefined;
+    const host = layer.url;// ? new URL(layer.url, document.location).host : undefined;
 
     command.promise = new Promise((resolve, reject) => {
         command.resolve = resolve;
@@ -265,12 +265,15 @@ Scheduler.prototype.commandsWaitingExecutionCount = function commandsWaitingExec
 };
 
 Scheduler.prototype.commandsRunningCount = function commandsRunningCount() {
-    let sum = this.defaultQueue.counters.executing;
+    let r = {};
+    r['default'] = this.defaultQueue.counters.executing;
+    // let sum = this.defaultQueue.counters.executing;
 
     for (var q of this.hostQueues) {
-        sum += q[1].counters.executing;
+        r[q[0]] = q[1].counters.executing;
+
     }
-    return sum;
+    return JSON.stringify(r);
 };
 
 Scheduler.prototype.resetCommandsCount = function resetCommandsCount(type) {

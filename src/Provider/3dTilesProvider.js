@@ -60,6 +60,7 @@ function $3dTilesIndex(tileset, baseURL) {
 }
 
 function preprocessDataLayer(layer, view, scheduler) {
+    layer.pending = new Set();
     layer.sseThreshold = layer.sseThreshold || 16;
     layer.cleanupDelay = layer.cleanupDelay || 1000;
 
@@ -174,6 +175,9 @@ function executeCommand(command) {
             b3dm: b3dmToMesh,
             pnts: pntsParse,
         };
+
+        layer.pending.add(url);
+
         return Fetcher.arrayBuffer(url, layer.networkOptions).then((result) => {
             if (result !== undefined) {
                 let func;
@@ -187,11 +191,12 @@ function executeCommand(command) {
                 } else if (magic == 'pnts') {
                     func = supportedFormats.pnts;
                 } else {
-                    Promise.reject(`Unsupported magic code ${magic}`);
+                    return Promise.reject(`Unsupported magic code ${magic}`);
                 }
                 if (func) {
                     // TODO: request should be delayed if there is a viewerRequestVolume
                     return func(result, layer, url).then((content) => {
+                        layer.pending.delete(url);
                         tile.content = content.object3d;
                         if (content.batchTable) {
                             tile.batchTable = content.batchTable;
@@ -202,14 +207,14 @@ function executeCommand(command) {
                     });
                 }
             }
+            layer.pending.delete(url);
+            layer.pending.add('special' + url);
             tile.traverse(setLayer);
-            return tile;
+            return Promise.resolve(tile);
         });
     } else {
-        return new Promise((resolve) => {
-            tile.traverse(setLayer);
-            resolve(tile);
-        });
+        tile.traverse(setLayer);
+        return Promise.resolve(tile);
     }
 }
 

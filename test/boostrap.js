@@ -20,12 +20,14 @@ function waitServerReady() {
 }
 
 before (async function () {
-    // start itowns
-    console.log('Starting itowns...');
-    global.itownsProcess = execFile('npm', ['start'], (error, stdout, stderr) => {
-        console.log(stdout);
-        console.log(stderr);
-    });
+    if (!process.env.USE_DEV_SERVER) {
+        // start itowns
+        console.log('Starting itowns...');
+        global.itownsProcess = execFile('npm', ['start'], (error, stdout, stderr) => {
+            console.log(stdout);
+            console.log(stderr);
+        });
+    }
 
     // wait for port 8080 to be ready
     await waitServerReady();
@@ -33,9 +35,9 @@ before (async function () {
     // Helper function: returns true when all layers are
     // ready and rendering has been done
     global.exampleCanRenderTest = (page) => {
-        return page.evaluate(() => {
-            return new Promise(resolve => {
-
+        console.log('Can Render ?');
+        return page.evaluate(async () => {
+            await new Promise(resolve => {
                 function getView() {
                     if (typeof(view) === 'object') {
                         return Promise.resolve(view);
@@ -47,15 +49,10 @@ before (async function () {
                 }
 
                 getView().then((v) => {
-                    v.addEventListener('layers-initialized', () => {
-                        resolve(true);
-                    });
-
-                    // add dummy layer to rearm 'layers-initialized' event
-                    v.addLayer({
-                        id: '_________',
-                        update: () => {},
-                        type: 'geometry',
+                    v.mainLoop.addEventListener('command-queue-empty', () => {
+                        if (v.mainLoop.renderingState == 0) {
+                            resolve(true);
+                        }
                     });
                 });
             });
@@ -68,7 +65,9 @@ before (async function () {
 // close browser and reset global variables
 after (function () {
     browser.close();
-    // stop itowns
-    global.itownsProcess.kill('SIGINT');
+    if (global.itownsProcess) {
+        // stop itowns
+        global.itownsProcess.kill('SIGINT');
+    }
 });
 
