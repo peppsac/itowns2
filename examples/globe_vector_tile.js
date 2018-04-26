@@ -1,4 +1,4 @@
-/* global itowns, document */
+/* global itowns, document, setupLoadingScreen */
 /* eslint-disable */
 // # Simple Globe viewer + a vector tile layer
 
@@ -11,7 +11,7 @@ var viewerDiv = document.getElementById('viewerDiv');
 
 // Instanciate iTowns GlobeView*
 var view = new itowns.GlobeView(viewerDiv, positionOnGlobe);
-
+setupLoadingScreen(viewerDiv, globeView);
 function addLayerCb(layer) {
     return view.addLayer(layer);
 }
