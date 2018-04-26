@@ -11,7 +11,7 @@ var viewerDiv = document.getElementById('viewerDiv');
 
 // Instanciate iTowns GlobeView*
 var view = new itowns.GlobeView(viewerDiv, positionOnGlobe);
-setupLoadingScreen(viewerDiv, globeView);
+setupLoadingScreen(viewerDiv, view);
 function addLayerCb(layer) {
     return view.addLayer(layer);
 }

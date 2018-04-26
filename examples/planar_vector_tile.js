@@ -20,7 +20,7 @@ var camera = new itowns.THREE.OrthographicCamera(
 // Instanciate PlanarView
 var view = new itowns.PlanarView(
         viewerDiv, extent, { maxSubdivisionLevel: 20, camera: camera });
-setupLoadingScreen(viewerDiv, globeView);
+setupLoadingScreen(viewerDiv, view);
 var onMouseWheel = function onMouseWheel(event) {
     var change = 1 - (Math.sign(event.wheelDelta || -event.detail) * 0.1);
 

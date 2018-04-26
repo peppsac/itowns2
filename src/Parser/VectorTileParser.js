@@ -40,7 +40,6 @@ function readPBF(file, options) {
     });
 
     return GeoJsonParser.parse(geojson, {
-        json: true,
         crsOut: options.extent.crs(),
         filteringExtent: options.filteringExtent,
         filter: options.filter,

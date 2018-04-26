@@ -31,13 +31,7 @@ function getVectorTile(tile, coords, layer) {
     const url = URLBuilder.xyz(coords, layer);
 
     if (layer.type == 'color') {
-        return VectorTileHelper.getVectorTileTextureByUrl(url, tile, layer, coords)
-            .then((texture) => {
-                const result = {
-                    texture,
-                };
-                return result;
-            });
+        return VectorTileHelper.getVectorTileTextureByUrl(url, tile, layer, coords);
     }
 }
 
@@ -56,7 +50,7 @@ function executeCommand(command) {
             OGCWebServiceHelper.WMTS_WGS84Parent(coordTMS, command.targetLevel) :
             undefined;
         if (func) {
-            promises.push(func(tile, coordTMS, layer));
+            promises.push(func(tile, coordTMSParent || coordTMS, layer));
         } else {
             const urld = URLBuilder.xyz(coordTMSParent || coordTMS, layer);
 

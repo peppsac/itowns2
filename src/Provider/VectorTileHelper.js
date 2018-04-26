@@ -45,7 +45,8 @@ export default {
      * @param {Layer} layer
      * @param {Extent} coords
      *
-     * @return {THREE.Texture}
+     * @return {Object} Contains a <code>texture</code> property that is the
+     * resulting texture of the vector tile.
      */
     getVectorTileTextureByUrl(url, tile, layer, coords) {
         if (layer.type !== 'color') return;
@@ -68,7 +69,9 @@ export default {
                 texture.premultiplyAlpha = true;
             }
 
-            return texture;
+            return {
+                texture,
+            };
         });
     },
 };
