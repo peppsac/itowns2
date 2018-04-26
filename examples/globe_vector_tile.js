@@ -129,4 +129,3 @@ itowns.Fetcher.json('https://raw.githubusercontent.com/Oslandia/postile-openmapt
 
 
 exports.view = view;
-exports.initialPosition = positionOnGlobe;

@@ -11,34 +11,26 @@ var extent = new itowns.Extent(
 // `viewerDiv` will contain iTowns' rendering area (`<canvas>`)
 var viewerDiv = document.getElementById('viewerDiv');
 
-var r = viewerDiv.clientWidth / viewerDiv.clientHeight;
-var camera = new itowns.THREE.OrthographicCamera(
-    extent.west(), extent.east(),
-    extent.east() / r, extent.west() / r,
-    0, 1000);
-
 // Instanciate PlanarView
-var view = new itowns.PlanarView(
-        viewerDiv, extent, { maxSubdivisionLevel: 20, camera: camera });
+var view = new itowns.PlanarView(viewerDiv, extent, { maxSubdivisionLevel: 20 });
+
+// eslint-disable-next-line no-new
+new itowns.PlanarControls(view, {
+    // We do not want the user to zoom out too much
+    maxAltitude: 40000000,
+    // We want to keep the rotation disabled, to only have a view from the top
+    enableRotation: false,
+    // Faster zoom in/out speed
+    zoomInFactor: 0.5,
+    zoomOutFactor: 0.5,
+    // Don't zoom too much on smart zoom
+    smartZoomHeightMax: 100000,
+});
+
+// Turn in the right angle
+view.camera.camera3D.rotateZ(-Math.PI / 2);
 setupLoadingScreen(viewerDiv, view);
-var onMouseWheel = function onMouseWheel(event) {
-    var change = 1 - (Math.sign(event.wheelDelta || -event.detail) * 0.1);
 
-    var halfNewWidth = (view.camera.camera3D.right - view.camera.camera3D.left) * change * 0.5;
-    var halfNewHeight = (view.camera.camera3D.top - view.camera.camera3D.bottom) * change * 0.5;
-    var cx = (view.camera.camera3D.right + view.camera.camera3D.left) * 0.5;
-    var cy = (view.camera.camera3D.top + view.camera.camera3D.bottom) * 0.5;
-
-    view.camera.camera3D.left = cx - halfNewWidth;
-    view.camera.camera3D.right = cx + halfNewWidth;
-    view.camera.camera3D.top = cy + halfNewHeight;
-    view.camera.camera3D.bottom = cy - halfNewHeight;
-
-    view.notifyChange(true);
-};
-
-var dragStartPosition;
-var dragCameraStart;
 var mapboxLayers = [];
 
 var count = 0;
@@ -142,38 +134,6 @@ itowns.Fetcher.json('https://raw.githubusercontent.com/Oslandia/postile-openmapt
             return properties.mapboxLayer.length > 0;
         },
     });
-});
-
-viewerDiv.addEventListener('DOMMouseScroll', onMouseWheel);
-viewerDiv.addEventListener('mousewheel', onMouseWheel);
-
-viewerDiv.addEventListener('mousedown', function mouseDown(event) {
-    dragStartPosition = new itowns.THREE.Vector2(event.clientX, event.clientY);
-    dragCameraStart = {
-        left: view.camera.camera3D.left,
-        right: view.camera.camera3D.right,
-        top: view.camera.camera3D.top,
-        bottom: view.camera.camera3D.bottom,
-    };
-});
-viewerDiv.addEventListener('mousemove', function mouseMove(event) {
-    var width;
-    var deltaX;
-    var deltaY;
-    if (dragStartPosition) {
-        width = view.camera.camera3D.right - view.camera.camera3D.left;
-        deltaX = width * (event.clientX - dragStartPosition.x) / -viewerDiv.clientWidth;
-        deltaY = width * (event.clientY - dragStartPosition.y) / viewerDiv.clientHeight;
-
-        view.camera.camera3D.left = dragCameraStart.left + deltaX;
-        view.camera.camera3D.right = dragCameraStart.right + deltaX;
-        view.camera.camera3D.top = dragCameraStart.top + deltaY;
-        view.camera.camera3D.bottom = dragCameraStart.bottom + deltaY;
-        view.notifyChange(true);
-    }
-});
-viewerDiv.addEventListener('mouseup', function mouseUp() {
-    dragStartPosition = undefined;
 });
 
 // Request redraw
