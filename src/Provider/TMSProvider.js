@@ -50,7 +50,7 @@ function executeCommand(command) {
             OGCWebServiceHelper.WMTS_WGS84Parent(coordTMS, command.targetLevel) :
             undefined;
         if (func) {
-            promises.push(func(tile, coordTMSParent || coordTMS, layer));
+            promises.push(func(tile, coordTMS, layer));
         } else {
             const urld = URLBuilder.xyz(coordTMSParent || coordTMS, layer);
 
