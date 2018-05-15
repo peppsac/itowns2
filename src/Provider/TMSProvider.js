@@ -52,7 +52,8 @@ function executeCommand(command) {
         if (func) {
             promises.push(func(tile, coordTMS, layer));
         } else {
-            const urld = URLBuilder.xyz(coordTMSParent || coordTMS, layer);
+            const urld = URLBuilder.xyz(coordTMSParent || coordTMS, layer) +
+                `&BBOX=${tile.extent.west()},${tile.extent.south()},${tile.extent.east()},${tile.extent.noth()}`;
 
             promises.push(OGCWebServiceHelper.getColorTextureByUrl(urld, layer.networkOptions).then((texture) => {
                 const result = {};
