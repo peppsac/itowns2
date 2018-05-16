@@ -40,7 +40,7 @@ itowns.Fetcher.json('https://raw.githubusercontent.com/Oslandia/postile-openmapt
         protocol: 'xyz',
         id: 'MVT',
         // eslint-disable-next-line no-template-curly-in-string
-        url: 'https://osm.oslandia.io/data/v3/${z}/${x}/${y}.pbf?srid=3946&BBOX=1837816.94334,5170036.4587,1847692.32501,5178412.82698',
+        url: 'https://osm.oslandia.io/data/v3/${z}/${x}/${y}.pbf?srid=3946',
         extent: [extent.west(), extent.east(), extent.south(), extent.north()],
         projection: 'EPSG:3946',
         format: 'application/x-protobuf;type=mapbox-vector',

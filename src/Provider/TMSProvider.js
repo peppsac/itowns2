@@ -28,7 +28,8 @@ function preprocessDataLayer(layer) {
 }
 
 function getVectorTile(tile, coords, layer) {
-    const url = URLBuilder.xyz(coords, layer);
+    const urla = URLBuilder.xyz(coords, layer);
+    const url = `${urla}&BBOX=${tile.extent.west()},${tile.extent.south()},${tile.extent.east()},${tile.extent.north()}`;
 
     if (layer.type == 'color') {
         return VectorTileHelper.getVectorTileTextureByUrl(url, tile, layer, coords);
@@ -52,8 +53,7 @@ function executeCommand(command) {
         if (func) {
             promises.push(func(tile, coordTMS, layer));
         } else {
-            const urld = URLBuilder.xyz(coordTMSParent || coordTMS, layer) +
-                `&BBOX=${tile.extent.west()},${tile.extent.south()},${tile.extent.east()},${tile.extent.noth()}`;
+            const urld = URLBuilder.xyz(coordTMSParent || coordTMS, layer);
 
             promises.push(OGCWebServiceHelper.getColorTextureByUrl(urld, layer.networkOptions).then((texture) => {
                 const result = {};
