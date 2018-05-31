@@ -169,7 +169,7 @@ function PanoramaView(viewerDiv, coordinates, type, options = {}) {
     camera.fov = 45;
     camera.near = 0.1;
     camera.far = 1000;
-    camera.up = coordinates.geodesicNormal;
+    camera.up = coordinates.getGeodesicNormal();
     // look at to the north
     camera.lookAt(new THREE.Vector3(0, 1, 0).add(camera.position));
 

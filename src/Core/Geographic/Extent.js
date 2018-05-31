@@ -372,21 +372,23 @@ Extent.prototype.union = function union(extent) {
  * for the point to belong to this Extent object
  * @param {Coordinates} coordinates  The coordinates to belong
  */
-Extent.prototype.expandByPoint = function expandByPoint(coordinates) {
+Extent.prototype.expandByPoints = function expandByPoints(coordinates) {
     const coords = coordinates.as(this.crs());
-    const we = coords._values[0];
-    if (we < this.west()) {
-        this._values[CARDINAL.WEST] = we;
-    }
-    if (we > this.east()) {
-        this._values[CARDINAL.EAST] = we;
-    }
-    const sn = coords._values[1];
-    if (sn < this.south()) {
-        this._values[CARDINAL.SOUTH] = sn;
-    }
-    if (sn > this.north()) {
-        this._values[CARDINAL.NORTH] = sn;
+    for (let i = 0; i < coords.count; i++) {
+        const we = coords._values[3 * i + 0];
+        if (we < this.west()) {
+            this._values[CARDINAL.WEST] = we;
+        }
+        if (we > this.east()) {
+            this._values[CARDINAL.EAST] = we;
+        }
+        const sn = coords._values[3 * i + 1];
+        if (sn < this.south()) {
+            this._values[CARDINAL.SOUTH] = sn;
+        }
+        if (sn > this.north()) {
+            this._values[CARDINAL.NORTH] = sn;
+        }
     }
 };
 

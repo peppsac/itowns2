@@ -69,7 +69,7 @@ BuilderEllipsoidTile.prototype.VertexPosition = function VertexPosition(params) 
 
 // get normal for last vertex
 BuilderEllipsoidTile.prototype.VertexNormal = function VertexNormal() {
-    return this.tmp.coords[1].geodesicNormal;
+    return this.tmp.coords[1].getGeodesicNormal();
 };
 
 // coord u tile to projected

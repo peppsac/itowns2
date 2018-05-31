@@ -53,6 +53,7 @@ describe('Coordinate conversions', function () {
         assertFloatEqual(5170916.93, coord2.y(), 2);
         // and convert back to EPSG:4626 standard in degree.
         var coord3 = coord2.as('EPSG:4326');
+
         // verify coordinates
         assertFloatEqual(longIn, coord3.longitude());
         assertFloatEqual(latIn, coord3.latitude());
@@ -62,14 +63,14 @@ describe('Coordinate conversions', function () {
 describe('Coordinate surface normale property', function () {
     it('should correctly compute a surface normal ', function () {
         const coord0 = new Coordinates('EPSG:4326', 15.0, 12.0).as('EPSG:4978');
-        const normal0 = coord0.geodesicNormal;
+        const normal0 = coord0.getGeodesicNormal(0);
 
         assertFloatEqual(normal0.x, 0.944818029);
         assertFloatEqual(normal0.y, 0.253163227);
         assertFloatEqual(normal0.z, 0.207911690);
 
         const coord1 = new Coordinates('EPSG:4978', 6027050.95, 1614943.43, 1317402.53);
-        const normal1 = coord1.geodesicNormal;
+        const normal1 = coord1.getGeodesicNormal(0);
 
         assertFloatEqual(normal0.x, normal1.x);
         assertFloatEqual(normal0.y, normal1.y);
@@ -78,7 +79,7 @@ describe('Coordinate surface normale property', function () {
     it('should correctly return the default up vector for planar mode ', function () {
         const coord0 = new Coordinates('EPSG:3946', 15.0, 12.0);
 
-        const normal0 = coord0.geodesicNormal;
+        const normal0 = coord0.getGeodesicNormal(0);
 
         assert.equal(0, normal0.x);
         assert.equal(0, normal0.y);

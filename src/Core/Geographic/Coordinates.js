@@ -110,53 +110,76 @@ export function is4326(crs) {
 }
 
 // Only support explicit conversions
-const cartesian = new THREE.Vector3();
 function _convert(coordsIn, newCrs, target) {
-    target = target || new Coordinates(newCrs, 0, 0);
+    if (target && coordsIn.count != target.count) {
+        throw new Error(`target.count should match input coords.count (${target.count} != ${coordsIn.count}`);
+    }
+    target = target || new Coordinates(newCrs, coordsIn.count);
     if (newCrs === coordsIn.crs) {
         return target.copy(coordsIn);
     } else {
         if (is4326(coordsIn.crs) && newCrs === 'EPSG:4978') {
-            ellipsoid.cartographicToCartesian(coordsIn, cartesian);
-            target.set(newCrs, cartesian);
-            target._normal = coordsIn.geodesicNormal;
+            ellipsoid.cartographicToCartesian(coordsIn, target);
+            target.crs = newCrs;
+            // TODO target._normal = coordsIn.geodesicNormal;
             return target;
         }
 
         if (coordsIn.crs === 'EPSG:4978' && is4326(newCrs)) {
-            ellipsoid.cartesianToCartographic({
-                x: coordsIn._values[0],
-                y: coordsIn._values[1],
-                z: coordsIn._values[2],
-            }, target);
+            ellipsoid.cartesianToCartographic(coordsIn._values, target._values);
+            target.crs = newCrs;
             return target;
         }
 
         if (coordsIn.crs in proj4.defs && newCrs in proj4.defs) {
-            const val0 = coordsIn._values[0];
-            let val1 = coordsIn._values[1];
             const crsIn = coordsIn.crs;
 
             // there is a bug for converting anything from and to 4978 with proj4
             // https://github.com/proj4js/proj4js/issues/195
             // the workaround is to use an intermediate projection, like EPSG:4326
             if (newCrs == 'EPSG:4978') {
-                const p = instanceProj4(crsIn, 'EPSG:4326').forward([val0, val1]);
-                target.set('EPSG:4326', p[0], p[1], coordsIn._values[2]);
+                const p = instanceProj4(crsIn, 'EPSG:4326');
+                for (let i = 0; i < coordsIn._values.length; i += 3) {
+                    const proj = p.forward(Array.prototype.slice.call(coordsIn._values, i, i + 2));
+                    target._values[i] = proj[0];
+                    target._values[i + 1] = proj[1];
+                    target._values[i + 2] = coordsIn._values[i + 2];
+                }
+                target.crs = 'EPSG:4326';
                 return target.as('EPSG:4978', target);
             } else if (coordsIn.crs === 'EPSG:4978') {
                 coordsIn.as('EPSG:4326', target);
-                const p = instanceProj4(target.crs, newCrs).forward([target._values[0], target._values[1]]);
-                target.set(newCrs, p[0], p[1], target._values[2]);
+                const p = instanceProj4(target.crs, newCrs);
+                for (let i = 0; i < target._values.length; i += 3) {
+                    const proj = p.forward(Array.prototype.slice.call(target._values, i, i + 2));
+                    target._values[i] = proj[0];
+                    target._values[i + 1] = proj[1];
+                    target._values[i + 2] = target._values[i + 2];
+                }
+                target.crs = newCrs;
                 return target;
             } else if (is4326(crsIn) && newCrs == 'EPSG:3857') {
-                val1 = THREE.Math.clamp(val1, -89.999999, 89.999999);
-                const p = instanceProj4(crsIn, newCrs).forward([val0, val1]);
-                return target.set(newCrs, p[0], p[1], coordsIn._values[2]);
+                const p = instanceProj4(crsIn, newCrs);
+                for (let i = 0; i < coordsIn._values.length; i += 3) {
+                    const v1 = THREE.Math.clamp(coordsIn._values[i], -89.999999, 89.999999);
+                    const proj = p.forward([v1, coordsIn._values[i + 1]]);
+                    target._values[i] = proj[0];
+                    target._values[i + 1] = proj[1];
+                    target._values[i + 2] = coordsIn._values[i + 2];
+                }
+                target.crs = newCrs;
+                return target;
             } else {
                 // here is the normal case with proj4
-                const p = instanceProj4(crsIn, newCrs).forward([val0, val1]);
-                return target.set(newCrs, p[0], p[1], coordsIn._values[2]);
+                const p = instanceProj4(crsIn, newCrs);
+                for (let i = 0; i < coordsIn._values.length; i += 3) {
+                    const proj = p.forward(Array.prototype.slice.call(coordsIn._values, i, i + 2));
+                    target._values[i] = proj[0];
+                    target._values[i + 1] = proj[1];
+                    target._values[i + 2] = coordsIn._values[i + 2];
+                }
+                target.crs = newCrs;
+                return target;
             }
         }
 
@@ -184,42 +207,66 @@ function _convert(coordsIn, newCrs, target) {
  */
 
 function Coordinates(crs, ...coordinates) {
-    this._values = new Float64Array(3);
     this.set(crs, ...coordinates);
+    this._normals = {};
 
+    Object.defineProperty(this, 'count',
+        {
+            configurable: true,
+            get: () => this._values.length / 3,
+        });
+    let deprectatedWarnCount = 0;
     Object.defineProperty(this, 'geodesicNormal',
         {
             configurable: true,
             get: () => {
-                this._normal = this._normal || computeGeodesicNormal(this);
-                return this._normal;
+                if (deprectatedWarnCount < 3) {
+                    console.warn('geodesicNormal property is deprectated. Use getGeodesicNormal(index) instead');
+                    deprectatedWarnCount++;
+                }
+                return this.getGeodesicNormal(0);
             },
         });
 }
 
 const planarNormal = new THREE.Vector3(0, 0, 1);
 
-function computeGeodesicNormal(coord) {
+function computeGeodesicNormal(coord, index) {
     if (is4326(coord.crs)) {
-        return ellipsoid.geodeticSurfaceNormalCartographic(coord);
+        return ellipsoid.geodeticSurfaceNormalCartographic(coord, index);
     }
     // In globe mode (EPSG:4978), we compute the normal.
     if (coord.crs == 'EPSG:4978') {
-        return ellipsoid.geodeticSurfaceNormal(coord);
+        return ellipsoid.geodeticSurfaceNormal(coord, index);
     }
     // In planar mode, normal is the up vector.
     return planarNormal;
 }
 
+Coordinates.prototype.getGeodesicNormal = function geodesicNormal(index = 0) {
+    // TODO: normal cache
+    return computeGeodesicNormal(this, index);
+};
+
 Coordinates.prototype.set = function set(crs, ...coordinates) {
     _crsToUnitWithError(crs);
     this.crs = crs;
 
-    if (coordinates.length == 1 && coordinates[0] instanceof THREE.Vector3) {
-        this._values[0] = coordinates[0].x;
-        this._values[1] = coordinates[0].y;
-        this._values[2] = coordinates[0].z;
+    if (coordinates.length == 1) {
+        if (coordinates[0] instanceof THREE.Vector3) {
+            this._values = new Float64Array(3);
+            this._values[0] = coordinates[0].x;
+            this._values[1] = coordinates[0].y;
+            this._values[2] = coordinates[0].z;
+        } else if (coordinates[0] instanceof Float64Array) {
+            this._values = coordinates[0];
+        } else if (coordinates[0] instanceof Float32Array) {
+            this._values = coordinates[0];
+        } else if (Number.isInteger(coordinates[0])) {
+            this._values = new Float64Array(3 * coordinates[0]);
+        }
     } else {
+        this._values = new Float64Array(3);
         for (let i = 0; i < coordinates.length && i < 3; i++) {
             this._values[i] = coordinates[i];
         }
@@ -239,6 +286,7 @@ Coordinates.prototype.clone = function clone(target) {
     } else {
         r = new Coordinates(this.crs, ...this._values);
     }
+    r._values = Float64Array.from(this._values);
     if (this._normal) {
         r._normal = this._normal.clone();
     }
@@ -247,6 +295,7 @@ Coordinates.prototype.clone = function clone(target) {
 
 Coordinates.prototype.copy = function copy(src) {
     this.set(src.crs, ...src._values);
+    this._values = Float64Array.from(src._values);
     return this;
 };
 
@@ -270,9 +319,9 @@ Coordinates.prototype.copy = function copy(src) {
  * @return     {number} - The longitude of the position.
  */
 
-Coordinates.prototype.longitude = function longitude() {
+Coordinates.prototype.longitude = function longitude(index = 0) {
     _assertIsGeographic(this.crs);
-    return this._values[0];
+    return this._values[3 * index + 0];
 };
 
 /**
@@ -295,8 +344,8 @@ Coordinates.prototype.longitude = function longitude() {
  * @return     {number} - The latitude of the position.
  */
 
-Coordinates.prototype.latitude = function latitude() {
-    return this._values[1];
+Coordinates.prototype.latitude = function latitude(index = 0) {
+    return this._values[3 * index + 1];
 };
 
 /**
@@ -319,9 +368,9 @@ Coordinates.prototype.latitude = function latitude() {
  * @return     {number} - The altitude of the position.
  */
 
-Coordinates.prototype.altitude = function altitude() {
+Coordinates.prototype.altitude = function altitude(index = 0) {
     _assertIsGeographic(this.crs);
-    return this._values[2];
+    return this._values[3 * index + 2];
 };
 
 /**
@@ -330,9 +379,9 @@ Coordinates.prototype.altitude = function altitude() {
  * @param      {number} - Set the altitude.
  */
 
-Coordinates.prototype.setAltitude = function setAltitude(altitude) {
+Coordinates.prototype.setAltitude = function setAltitude(altitude, index = 0) {
     _assertIsGeographic(this.crs);
-    this._values[2] = altitude;
+    this._values[3 * index + 2] = altitude;
 };
 
  /**
@@ -355,9 +404,9 @@ Coordinates.prototype.setAltitude = function setAltitude(altitude) {
  * @return     {number} - The longitude of the position.
  */
 
-Coordinates.prototype.x = function x() {
+Coordinates.prototype.x = function x(index = 0) {
     _assertIsGeocentric(this.crs);
-    return this._values[0];
+    return this._values[3 * index + 0];
 };
 
 /**
@@ -380,9 +429,9 @@ Coordinates.prototype.x = function x() {
  * @return     {number} - The latitude of the position.
  */
 
-Coordinates.prototype.y = function y() {
+Coordinates.prototype.y = function y(index = 0) {
     _assertIsGeocentric(this.crs);
-    return this._values[1];
+    return this._values[3 * index + 1];
 };
 
 /**
@@ -405,9 +454,9 @@ Coordinates.prototype.y = function y() {
  * @return     {number} - The altitude of the position.
  */
 
-Coordinates.prototype.z = function z() {
+Coordinates.prototype.z = function z(index = 0) {
     _assertIsGeocentric(this.crs);
-    return this._values[2];
+    return this._values[3 * index + 2];
 };
 
 /**
@@ -436,11 +485,20 @@ Coordinates.prototype.z = function z() {
  * @return     {Position} - position
  */
 
-Coordinates.prototype.xyz = function xyz(target) {
+Coordinates.prototype.xyz = function xyz(indexOrTarget, target) {
     _assertIsGeocentric(this.crs);
+    if (!Number.isInteger(indexOrTarget)) {
+        target = indexOrTarget;
+        indexOrTarget = 0;
+    }
     const v = target || new THREE.Vector3();
-    v.fromArray(this._values);
+    v.fromArray(this._values.slice(3 * indexOrTarget));
     return v;
+};
+
+Coordinates.prototype.xyzArray = function xyzArray(target) {
+    _assertIsGeocentric(this.crs);
+    return this._values;
 };
 
 /**
@@ -472,6 +530,10 @@ Coordinates.prototype.xyz = function xyz(target) {
 Coordinates.prototype.as = function as(crs, target) {
     if (crs === undefined || crsToUnit(crs) === undefined) {
         throw new Error(`Invalid crs paramater value '${crs}'`);
+    }
+    if (this.crs == crs) {
+        // TODO: add
+        return this;
     }
     return _convert(this, crs, target);
 };

@@ -1,12 +1,10 @@
 import * as THREE from 'three';
 import OBB from '../../../Renderer/ThreeExtended/OBB';
-import Coordinates from '../../Geographic/Coordinates';
 import ProjectionType from './Constants';
 import Extent from '../../Geographic/Extent';
 
 function PanoramaTileBuilder(type, ratio) {
     this.tmp = {
-        coords: new Coordinates('EPSG:4326', 0, 0),
         position: new THREE.Vector3(),
         normal: new THREE.Vector3(0, 0, 1),
     };

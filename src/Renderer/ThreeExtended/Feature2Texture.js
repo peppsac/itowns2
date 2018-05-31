@@ -2,36 +2,39 @@ import * as THREE from 'three';
 
 const pt = new THREE.Vector2();
 
-function _moveTo(ctx, coord, scale, origin) {
-    pt.x = coord._values[0] - origin.x;
-    pt.y = coord._values[1] - origin.y;
+function _moveTo(ctx, coord, offset, scale, origin) {
+    pt.x = coord[offset + 0] - origin.x;
+    pt.y = coord[offset + 1] - origin.y;
     pt.multiply(scale);
     ctx.moveTo(pt.x, pt.y);
 }
 
-function _lineTo(ctx, coord, scale, origin) {
-    pt.x = coord._values[0] - origin.x;
-    pt.y = coord._values[1] - origin.y;
+function _lineTo(ctx, coord, offset, scale, origin) {
+    pt.x = coord[offset + 0] - origin.x;
+    pt.y = coord[offset + 1] - origin.y;
     pt.multiply(scale);
     ctx.lineTo(pt.x, pt.y);
 }
 
 function drawPolygon(ctx, vertices, contour, holes, origin, scale, properties, style = {}) {
-    if (vertices.length === 0) {
+    if (vertices.count === 0) {
         return;
     }
+
+    const v = vertices._values;
+
     // build contour
     ctx.beginPath();
     if (contour) {
-        _moveTo(ctx, vertices[contour.offset], scale, origin);
+        _moveTo(ctx, v, 3 * contour.offset, scale, origin);
         for (let i = 1; i < contour.count; i++) {
-            _lineTo(ctx, vertices[contour.offset + i], scale, origin);
+            _lineTo(ctx, v, 3 * (contour.offset + i), scale, origin);
         }
     } else {
         // linestring
-        _moveTo(ctx, vertices[0], scale, origin);
-        for (let i = 1; i < vertices.length; i++) {
-            _lineTo(ctx, vertices[i], scale, origin);
+        _moveTo(ctx, v, 0, scale, origin);
+        for (let i = 3; i < v.length; i += 3) {
+            _lineTo(ctx, v, i, scale, origin);
         }
     }
 
@@ -39,9 +42,9 @@ function drawPolygon(ctx, vertices, contour, holes, origin, scale, properties, s
     if (contour && holes) {
         for (const hole of holes) {
             // ctx.beginPath();
-            _moveTo(ctx, vertices[hole.offset], scale, origin);
+            _moveTo(ctx, v, 3 * hole.offset, scale, origin);
             for (let i = 1; i < hole.count; i++) {
-                _lineTo(ctx, vertices[hole.offset + i], scale, origin);
+                _lineTo(ctx, v, 3 * (hole.offset + i), scale, origin);
             }
             ctx.closePath();
         }
@@ -79,7 +82,7 @@ function drawPoint(ctx, vertice, origin, scale, style = {}) {
 function _drawFeatureGeometry(ctx, feature, geometry, origin, scale, extent, style) {
     const properties = feature.properties;
     if (geometry.type === 'point') {
-        drawPoint(ctx, geometry.vertices[0], origin, scale, style);
+        drawPoint(ctx, geometry.vertices, origin, scale, style);
     } else if (geometry.extent.intersectsExtent(extent)) {
         drawPolygon(ctx, geometry.vertices, geometry.contour, geometry.holes, origin, scale, properties, style);
     }

@@ -1,12 +1,12 @@
 function pointIsOverLine(point, linePoints, epsilon) {
-    if (point.crs != linePoints[0].crs) {
+    if (point.crs != linePoints.crs) {
         throw new Error('crs must be the same');
     }
 
     const x0 = point._values[0];
     const y0 = point._values[1];
     // for each segment of the line (j is i -1)
-    for (var i = 1, j = 0; i < linePoints.length; j = i++) {
+    for (var i = 1, j = 0; i < linePoints.count; j = i++) {
         /* **********************************************************
             norm     : norm of vector P1P2
             distance : distance point P0 to line P1P2
@@ -26,10 +26,10 @@ function pointIsOverLine(point, linePoints, epsilon) {
             (P1)                            (P2)
         *********************************************************** */
 
-        const x1 = linePoints[i]._values[0];
-        const y1 = linePoints[i]._values[1];
-        const x2 = linePoints[j]._values[0];
-        const y2 = linePoints[j]._values[1];
+        const x1 = linePoints._values[3 * i + 0];
+        const y1 = linePoints._values[3 * i + 1];
+        const x2 = linePoints._values[3 * j + 0];
+        const y2 = linePoints._values[3 * j + 1];
 
         const Xp = x0 - x1;
         const Yp = y0 - y1;
@@ -51,7 +51,7 @@ function pointIsOverLine(point, linePoints, epsilon) {
 }
 
 function getClosestPoint(point, points, epsilon) {
-    if (point.crs != points[0].crs) {
+    if (point.crs != points.crs) {
         throw new Error('crs must be the same');
     }
 
@@ -59,9 +59,9 @@ function getClosestPoint(point, points, epsilon) {
     const y0 = point._values[1];
     let squaredEpsilon = epsilon * epsilon;
     let closestPoint;
-    for (var i = 0; i < points.length; ++i) {
-        const x1 = points[i]._values[0];
-        const y1 = points[i]._values[1];
+    for (var i = 0; i < points.count; ++i) {
+        const x1 = points._values[3 * i + 0];
+        const y1 = points._values[3 * i + 1];
         const xP = x0 - x1;
         const yP = y0 - y1;
         const n = xP * xP + yP * yP;
@@ -74,7 +74,7 @@ function getClosestPoint(point, points, epsilon) {
 }
 
 function pointIsInsidePolygon(point, polygonPoints) {
-    if (point.crs != polygonPoints[0].crs) {
+    if (point.crs != polygonPoints.crs) {
         throw new Error('crs must be the same');
     }
     // ray-casting algorithm based on
@@ -86,11 +86,11 @@ function pointIsInsidePolygon(point, polygonPoints) {
     let inside = false;
     // in first j is last point of polygon
     // for each segment of the polygon (j is i -1)
-    for (let i = 0, j = polygonPoints.length - 1; i < polygonPoints.length; j = i++) {
-        const xi = polygonPoints[i]._values[0];
-        const yi = polygonPoints[i]._values[1];
-        const xj = polygonPoints[j]._values[0];
-        const yj = polygonPoints[j]._values[1];
+    for (let i = 0, j = polygonPoints.count - 1; i < polygonPoints.count; j = i++) {
+        const xi = polygonPoints._values[3 * i + 0];
+        const yi = polygonPoints._values[3 * i + 1];
+        const xj = polygonPoints._values[3 * j + 0];
+        const yj = polygonPoints._values[3 * j + 1];
 
         // isIntersect semi-infinite ray horizontally with polygon's edge
         const isIntersect = ((yi > y) != (yj > y))
@@ -104,16 +104,12 @@ function pointIsInsidePolygon(point, polygonPoints) {
 }
 
 function isFeatureSingleGeometryUnderCoordinate(coordinate, geometry, epsilon) {
-    const coordinates = geometry.type == 'polygon' ?
-        geometry.vertices.slice(geometry.contour.offset, geometry.contour.offset + geometry.contour.count) :
-        geometry.vertices;
-
-    if (geometry.type == 'linestring' && pointIsOverLine(coordinate, coordinates, epsilon)) {
+    if (geometry.type == 'linestring' && pointIsOverLine(coordinate, geometry.vertices, epsilon)) {
         return true;
-    } else if (geometry.type == 'polygon' && pointIsInsidePolygon(coordinate, coordinates)) {
+    } else if (geometry.type == 'polygon' && pointIsInsidePolygon(coordinate, geometry.vertices)) {
         return true;
     } else if (geometry.type == 'point') {
-        const closestPoint = getClosestPoint(coordinate, coordinates, epsilon);
+        const closestPoint = getClosestPoint(coordinate, geometry.vertices, epsilon);
         if (closestPoint) {
             return { coordinates: closestPoint };
         }
