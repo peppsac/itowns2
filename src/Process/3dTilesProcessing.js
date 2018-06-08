@@ -222,20 +222,30 @@ export function pre3dTilesUpdate(context, layer) {
 
 const cameraLocalPosition = new THREE.Vector3();
 const worldPosition = new THREE.Vector3();
-function computeNodeSSE(camera, node) {
+function computeNodeSSE(context, camera, node) {
     node.distance = 0;
     if (node.boundingVolume.region) {
         worldPosition.setFromMatrixPosition(node.boundingVolume.region.matrixWorld);
         cameraLocalPosition.copy(camera.camera3D.position).sub(worldPosition);
         node.distance = node.boundingVolume.region.box3D.distanceToPoint(cameraLocalPosition);
+        const s = node.boundingVolume.region.box3D.getSize();
+        const maxComponent = Math.max(s.x, Math.max(s.y, s.z));
+        context.distance.min = Math.min(context.distance.min, node.distance - maxComponent);
+        context.distance.max = Math.max(context.distance.max, node.distance + maxComponent);
     } else if (node.boundingVolume.box) {
         worldPosition.setFromMatrixPosition(node.matrixWorld);
         cameraLocalPosition.copy(camera.camera3D.position).sub(worldPosition);
         node.distance = node.boundingVolume.box.distanceToPoint(cameraLocalPosition);
+        const s = node.boundingVolume.box.getSize();
+        const maxComponent = Math.max(s.x, Math.max(s.y, s.z));
+        context.distance.min = Math.min(context.distance.min, node.distance);
+        context.distance.max = Math.max(context.distance.max, node.distance + maxComponent);
     } else if (node.boundingVolume.sphere) {
         worldPosition.setFromMatrixPosition(node.matrixWorld);
         cameraLocalPosition.copy(camera.camera3D.position).sub(worldPosition);
         node.distance = Math.max(0.0, node.boundingVolume.sphere.distanceToPoint(cameraLocalPosition));
+        context.distance.min = Math.min(context.distance.min, node.distance);
+        context.distance.max = Math.max(context.distance.max, node.distance + 2 * node.boundingVolume.sphere.radius);
     } else {
         return Infinity;
     }
@@ -324,6 +334,6 @@ export function $3dTilesSubdivisionControl(context, layer, node) {
     if (layer.tileIndex.index[node.tileId].children === undefined) {
         return false;
     }
-    const sse = computeNodeSSE(context.camera, node);
+    const sse = computeNodeSSE(context, context.camera, node);
     return sse > layer.sseThreshold;
 }

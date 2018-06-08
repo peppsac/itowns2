@@ -265,4 +265,8 @@ TileMesh.prototype.findCommonAncestor = function findCommonAncestor(tile) {
     }
 };
 
+TileMesh.prototype.isAncestorOf = function isAncestorOf(node) {
+    return node.findCommonAncestor(this) === this;
+};
+
 export default TileMesh;
