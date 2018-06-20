@@ -371,7 +371,7 @@ function _readZ(layer, method, coord, nodes, cache) {
     }
 
     const tile = tileWithValidElevationTexture;
-    const src = tileWithValidElevationTexture.material.textures[l_ELEVATION][0];
+    const src = tileWithValidElevationTexture.material.textures[0][0];
 
     // check cache value if existing
     if (cache) {
