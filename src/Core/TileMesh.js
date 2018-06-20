@@ -161,8 +161,13 @@ TileMesh.prototype.setTexturesLayer = function setTexturesLayer(textures, layerT
 TileMesh.prototype.isColorLayerLoaded = function isColorLayerLoaded(layer) {
     const mat = this.material;
     const textures = mat.getLayerTextures(layer);
-    if (textures.length) {
-        return textures[0].coords.zoom > -1;
+    if (textures) {
+        for (const t of textures) {
+            if (!t.extent) {
+                return false;
+            }
+        }
+        return true;
     }
     return false;
 };

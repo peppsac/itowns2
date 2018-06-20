@@ -113,9 +113,11 @@ export default {
         // Draw the canvas
         if (Array.isArray(features)) {
             for (let i = 0; i < features.length; i++) {
-                drawFeature(ctx, features[i], origin, scale, extent, style);
+                if (features[i].geometry.vertices.length) {
+                    drawFeature(ctx, features[i], origin, scale, extent, style);
+                }
             }
-        } else {
+        } else if (features.geometry.vertices.length) {
             drawFeature(ctx, features, origin, scale, extent, style);
         }
 

@@ -14,7 +14,6 @@ import Capabilities from '../Core/System/Capabilities';
 import { l_COLOR, l_ELEVATION, EMPTY_TEXTURE_ZOOM } from './LayeredMaterialConstants';
 
 var emptyTexture = new THREE.Texture();
-emptyTexture.coords = { zoom: EMPTY_TEXTURE_ZOOM };
 
 const layerTypesCount = 2;
 var vector4 = new THREE.Vector4(0.0, 0.0, 0.0, 0.0);
@@ -329,6 +328,22 @@ LayeredMaterial.prototype.removeColorLayer = function removeColorLayer(layer) {
     this.uniforms.dTextures_01.value = this.textures[l_COLOR];
 };
 
+LayeredMaterial.prototype.getLayerTextures = function getLayerTextures(layer) {
+    if (layer.type === 'elevation') {
+        return this.textures[l_ELEVATION];
+    }
+
+    const index = this.indexOfColorLayer(layer.id);
+
+    if (index !== -1) {
+        const count = this.getTextureCountByLayerIndex(index);
+        const textureIndex = this.getTextureOffsetByLayerIndex(index);
+        return this.textures[l_COLOR].slice(textureIndex, textureIndex + count);
+    } else {
+        // throw new Error(`Invalid layer "${layer}"`);
+    }
+};
+
 LayeredMaterial.prototype.setLayerTextures = function setLayerTextures(layer, textures) {
     if (layer.type === 'elevation') {
         if (Array.isArray(textures)) {
@@ -388,6 +403,7 @@ LayeredMaterial.prototype.pushLayer = function pushLayer(layer, extents) {
         fx: layer.fx,
         idLayer: layer.id,
     };
+
     const newIndex = this.getColorLayersCount();
     const offset = newIndex === 0 ? 0 : this.getTextureOffsetByLayerIndex(newIndex - 1) + this.getTextureCountByLayerIndex(newIndex - 1);
 
@@ -485,22 +501,6 @@ LayeredMaterial.prototype.getColorLayerLevelById = function getColorLayerLevelBy
 
 LayeredMaterial.prototype.getElevationLayerLevel = function getElevationLayerLevel() {
     return this.textures[l_ELEVATION][0].coords.zoom;
-};
-
-LayeredMaterial.prototype.getLayerTextures = function getLayerTextures(layer) {
-    if (layer.type === 'elevation') {
-        return this.textures[l_ELEVATION];
-    }
-
-    const index = this.indexOfColorLayer(layer.id);
-
-    if (index !== -1) {
-        const count = this.getTextureCountByLayerIndex(index);
-        const textureIndex = this.getTextureOffsetByLayerIndex(index);
-        return this.textures[l_COLOR].slice(textureIndex, textureIndex + count);
-    } else {
-        return [];
-    }
 };
 
 LayeredMaterial.prototype.setUuid = function setUuid(uuid) {
