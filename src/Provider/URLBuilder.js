@@ -71,10 +71,10 @@ export default {
      */
     bbox: function bbox(bbox, layer) {
         const box = bbox.as(layer.projection);
-        const w = box.west();
-        const s = box.south();
-        const e = box.east();
-        const n = box.north();
+        const w = box.west().toFixed(5);
+        const s = box.south().toFixed(5);
+        const e = box.east().toFixed(5);
+        const n = box.north().toFixed(5);
 
         let bboxInUnit = layer.axisOrder || 'wsen';
         bboxInUnit = bboxInUnit.replace('w', `${w},`)

@@ -125,11 +125,14 @@ export function globeSubdivisionControl(minLevel, maxLevel, sseThreshold, maxDel
         // Prevent to subdivise the node if the current elevation level
         // we must avoid a tile, with level 20, inherits a level 3 elevation texture.
         // The induced geometric error is much too large and distorts the SSE
-        const currentElevationLevel = node.material.getElevationLayerLevel();
-        if (node.level < context.maxElevationLevel + maxDeltaElevationLevel &&
-            currentElevationLevel >= 0 &&
-            (node.level - currentElevationLevel) >= maxDeltaElevationLevel) {
-            return false;
+        const currentTexture = node.material.textures[0][0];
+        if (currentTexture.extent) {
+            const offsetScale = node.material.offsetScale[0][0];
+            const ratio = offsetScale.z;
+            // ratio is node size / texture size
+            if (ratio < 1 / Math.pow(2, maxDeltaElevationLevel)) {
+                return false;
+            }
         }
 
         const sse = computeNodeSSE(context.camera, node);

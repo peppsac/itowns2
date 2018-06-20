@@ -14,7 +14,6 @@ import Capabilities from '../Core/System/Capabilities';
 import { l_COLOR, l_ELEVATION, EMPTY_TEXTURE_ZOOM } from './LayeredMaterialConstants';
 
 var emptyTexture = new THREE.Texture();
-emptyTexture.coords = { zoom: EMPTY_TEXTURE_ZOOM };
 
 const layerTypesCount = 2;
 var vector4 = new THREE.Vector4(0.0, 0.0, 0.0, 0.0);
@@ -170,7 +169,6 @@ const LayeredMaterial = function LayeredMaterial(options) {
     this.uniforms.opacity = new THREE.Uniform(1.0);
 
     this.colorLayersId = [];
-    this.elevationLayersId = [];
 
     if (Capabilities.isLogDepthBufferSupported()) {
         this.defines = {
@@ -330,22 +328,55 @@ LayeredMaterial.prototype.removeColorLayer = function removeColorLayer(layer) {
     this.uniforms.dTextures_01.value = this.textures[l_COLOR];
 };
 
-LayeredMaterial.prototype.setTexturesLayer = function setTexturesLayer(textures, layerType, layer) {
-    const index = this.indexOfColorLayer(layer);
-    const slotOffset = this.getTextureOffsetByLayerIndex(index);
-    for (let i = 0, max = textures.length; i < max; i++) {
-        if (textures[i]) {
-            if (textures[i].texture !== null) {
-                this.setTexture(textures[i].texture, layerType, i + (slotOffset || 0), textures[i].pitch);
-            } else {
-                this.setLayerVisibility(index, false);
-                break;
-            }
-        }
+LayeredMaterial.prototype.getLayerTextures = function getLayerTextures(layer) {
+    if (layer.type === 'elevation') {
+        return this.textures[l_ELEVATION];
+    }
+
+    const index = this.indexOfColorLayer(layer.id);
+
+    if (index !== -1) {
+        const count = this.getTextureCountByLayerIndex(index);
+        const textureIndex = this.getTextureOffsetByLayerIndex(index);
+        return this.textures[l_COLOR].slice(textureIndex, textureIndex + count);
+    } else {
+        // throw new Error(`Invalid layer "${layer}"`);
     }
 };
 
-LayeredMaterial.prototype.setTexture = function setTexture(texture, layerType, slot, offsetScale) {
+LayeredMaterial.prototype.setLayerTextures = function setLayerTextures(layer, textures) {
+    if (layer.type === 'elevation') {
+        if (Array.isArray(textures)) {
+            textures = textures[0];
+        }
+        this._setTexture(textures.texture, l_ELEVATION, 0, textures.pitch);
+    } else if (layer.type === 'color') {
+        const index = this.indexOfColorLayer(layer.id);
+        const slotOffset = this.getTextureOffsetByLayerIndex(index);
+        if (Array.isArray(textures)) {
+            for (let i = 0, max = textures.length; i < max; i++) {
+                if (textures[i]) {
+                    if (textures[i].texture !== null) {
+                        this._setTexture(textures[i].texture, l_COLOR,
+                            i + (slotOffset || 0), textures[i].pitch);
+                    } else {
+                        this.setLayerVisibility(index, false);
+                        break;
+                    }
+                }
+            }
+        } else if (textures.texture !== null) {
+            this._setTexture(textures.texture,
+                layer.type == 'color' ? l_COLOR : l_ELEVATION, (slotOffset || 0), textures.pitch);
+        } else {
+            this.setLayerVisibility(index, false);
+        }
+    } else {
+        throw new Error(`Unsupported layer type '${layer.type}'`);
+    }
+};
+
+LayeredMaterial.prototype._setTexture = function _setTexture(texture, layerType, slot, offsetScale) {
     if (this.textures[layerType][slot] === undefined || this.textures[layerType][slot].image === undefined) {
         this.loadedTexturesCount[layerType] += 1;
     }
@@ -363,7 +394,16 @@ LayeredMaterial.prototype.setColorLayerParameters = function setColorLayerParame
     }
 };
 
-LayeredMaterial.prototype.pushLayer = function pushLayer(param) {
+LayeredMaterial.prototype.pushLayer = function pushLayer(layer, extents) {
+    const param = {
+        tileMT: layer.options.tileMatrixSet || extents[0].crs(),
+        texturesCount: extents.length,
+        visible: layer.visible,
+        opacity: layer.opacity,
+        fx: layer.fx,
+        idLayer: layer.id,
+    };
+
     const newIndex = this.getColorLayersCount();
     const offset = newIndex === 0 ? 0 : this.getTextureOffsetByLayerIndex(newIndex - 1) + this.getTextureCountByLayerIndex(newIndex - 1);
 
@@ -423,12 +463,15 @@ LayeredMaterial.prototype.getLayerUV = function setLayerUV(index) {
     return this.uniforms.paramLayers.value[index].y;
 };
 
-LayeredMaterial.prototype.setLayerOpacity = function setLayerOpacity(index, opacity) {
-    if (this.uniforms.paramLayers.value[index])
-        { this.uniforms.paramLayers.value[index].w = opacity; }
+LayeredMaterial.prototype.setLayerOpacity = function setLayerOpacity(layer, opacity) {
+    const index = Number.isInteger(layer) ? layer : this.indexOfColorLayer(layer.id);
+    if (this.uniforms.paramLayers.value[index]) {
+        this.uniforms.paramLayers.value[index].w = opacity;
+    }
 };
 
-LayeredMaterial.prototype.setLayerVisibility = function setLayerVisibility(index, visible) {
+LayeredMaterial.prototype.setLayerVisibility = function setLayerVisibility(layer, visible) {
+    const index = Number.isInteger(layer) ? layer : this.indexOfColorLayer(layer.id);
     this.uniforms.visibility.value[index] = visible;
 };
 
@@ -458,22 +501,6 @@ LayeredMaterial.prototype.getColorLayerLevelById = function getColorLayerLevelBy
 
 LayeredMaterial.prototype.getElevationLayerLevel = function getElevationLayerLevel() {
     return this.textures[l_ELEVATION][0].coords.zoom;
-};
-
-LayeredMaterial.prototype.getLayerTextures = function getLayerTextures(layerType, layerId) {
-    if (layerType === l_ELEVATION) {
-        return this.textures[l_ELEVATION];
-    }
-
-    const index = this.indexOfColorLayer(layerId);
-
-    if (index !== -1) {
-        const count = this.getTextureCountByLayerIndex(index);
-        const textureIndex = this.getTextureOffsetByLayerIndex(index);
-        return this.textures[l_COLOR].slice(textureIndex, textureIndex + count);
-    } else {
-        throw new Error(`Invalid layer id "${layerId}"`);
-    }
 };
 
 LayeredMaterial.prototype.setUuid = function setUuid(uuid) {
