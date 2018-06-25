@@ -63,6 +63,21 @@ function $3dTilesIndex(tileset, baseURL) {
 function preprocessDataLayer(layer, view, scheduler) {
     layer.sseThreshold = layer.sseThreshold || 16;
     layer.cleanupDelay = layer.cleanupDelay || 1000;
+    layer.metadataToElements = (meta) => {
+        if (meta.content) {
+            const p = meta.parent;
+            if (p && p.content) {
+                return {
+                    element: meta.content,
+                    parent: p.content,
+                };
+            } else {
+                return {
+                    element: meta.content,
+                };
+            }
+        }
+    };
 
     layer._cleanableTiles = [];
     return Fetcher.json(layer.url, layer.networkOptions).then((tileset) => {
