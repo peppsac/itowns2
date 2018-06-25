@@ -174,6 +174,22 @@ export default {
         layer.update = PointCloudProcessing.update;
         layer.postUpdate = PointCloudProcessing.postUpdate;
 
+        layer.metadataToElements = (meta) => {
+            if (meta.obj) {
+                const p = meta.parent; // TODO
+                if (p && p.obj) {
+                    return {
+                        element: meta.obj,
+                        parent: p.obj,
+                    };
+                } else {
+                    return {
+                        element: meta.obj,
+                    };
+                }
+            }
+        };
+
         // this probably needs to be moved to somewhere else
         layer.pickObjectsAt = (view, mouse, radius) => Picking.pickPointsAt(view, mouse, radius, layer);
 
