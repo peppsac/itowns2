@@ -222,6 +222,8 @@ export function pre3dTilesUpdate(context, layer) {
 
 const cameraLocalPosition = new THREE.Vector3();
 const worldPosition = new THREE.Vector3();
+const boundingVolumeBox = new THREE.Box3();
+const boundingVolumeSphere = new THREE.Sphere();
 function computeNodeSSE(camera, node) {
     node.distance = 0;
     if (node.boundingVolume.region) {
@@ -229,13 +231,16 @@ function computeNodeSSE(camera, node) {
         cameraLocalPosition.copy(camera.camera3D.position).sub(worldPosition);
         node.distance = node.boundingVolume.region.box3D.distanceToPoint(cameraLocalPosition);
     } else if (node.boundingVolume.box) {
-        worldPosition.setFromMatrixPosition(node.matrixWorld);
-        cameraLocalPosition.copy(camera.camera3D.position).sub(worldPosition);
-        node.distance = node.boundingVolume.box.distanceToPoint(cameraLocalPosition);
+        // boundingVolume.box is affected by matrixWorld
+        boundingVolumeBox.copy(node.boundingVolume.box);
+        boundingVolumeBox.applyMatrix4(node.matrixWorld);
+        node.distance = boundingVolumeBox.distanceToPoint(camera.camera3D.position);
     } else if (node.boundingVolume.sphere) {
-        worldPosition.setFromMatrixPosition(node.matrixWorld);
-        cameraLocalPosition.copy(camera.camera3D.position).sub(worldPosition);
-        node.distance = Math.max(0.0, node.boundingVolume.sphere.distanceToPoint(cameraLocalPosition));
+        // boundingVolume.sphere is affected by matrixWorld
+        boundingVolumeSphere.copy(node.boundingVolume.sphere);
+        boundingVolumeSphere.applyMatrix4(node.matrixWorld);
+        node.distance = Math.max(0.0,
+            boundingVolumeSphere.distanceToPoint(camera.camera3D.position));
     } else {
         return Infinity;
     }
