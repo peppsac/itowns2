@@ -5,6 +5,7 @@ import PotreeBinParser from '../Parser/PotreeBinParser';
 import PotreeCinParser from '../Parser/PotreeCinParser';
 import PointsMaterial from '../Renderer/PointsMaterial';
 import Picking from '../Core/Picking';
+import Points from '../Core/Points';
 
 // Create an A(xis)A(ligned)B(ounding)B(ox) for the child `childIndex` of one aabb.
 // (PotreeConverter protocol builds implicit octree hierarchy by applying the same
@@ -262,7 +263,7 @@ export default {
         const url = `${node.baseurl}/r${node.name}.${layer.extension}?isleaf=${command.isLeaf ? 1 : 0}`;
 
         return Fetcher.arrayBuffer(url, layer.fetchOptions).then(layer.parse).then((geometry) => {
-            const points = new THREE.Points(geometry, layer.material.clone());
+            const points = new Points(layer, geometry, layer.material.clone());
             addPickingAttribute(points);
             points.frustumCulled = false;
             points.matrixAutoUpdate = false;

@@ -1,4 +1,4 @@
-import { Vector4, Uniform, NoBlending, NormalBlending, RawShaderMaterial } from 'three';
+import { Vector2, Vector4, Uniform, NoBlending, NormalBlending, RawShaderMaterial } from 'three';
 import PointsVS from './Shader/PointsVS.glsl';
 import PointsFS from './Shader/PointsFS.glsl';
 import Capabilities from '../Core/System/Capabilities';
@@ -15,6 +15,7 @@ class PointsMaterial extends RawShaderMaterial {
 
         this.uniforms.size = new Uniform(this.size);
         this.uniforms.pickingMode = new Uniform(false);
+        this.uniforms.textureMode = new Uniform(false);
         this.uniforms.opacity = new Uniform(this.opacity);
         this.uniforms.overlayColor = new Uniform(this.overlayColor);
 
@@ -28,6 +29,8 @@ class PointsMaterial extends RawShaderMaterial {
         if (__DEBUG__) {
             this.defines.DEBUG = 1;
         }
+        this.colorLayer = null;
+
         this.updateUniforms();
     }
 
@@ -53,6 +56,48 @@ class PointsMaterial extends RawShaderMaterial {
         this.overlayColor.copy(source.overlayColor);
         this.updateUniforms();
         return this;
+    }
+
+    // Coloring support
+    pushLayer(layer, extents) {
+        this.colorLayer = layer;
+
+        this.uniforms.textureMode.value = true;
+        this.uniforms.texture = new Uniform();
+        this.uniforms.offsetScale = new Uniform(new Vector4(0, 0, 1, 1));
+        this.uniforms.extentTopLeft = new Uniform(new Vector2(extents[0].west(), extents[0].north()));
+        const dim = extents[0].dimensions();
+        this.uniforms.extentSize = new Uniform(new Vector2(dim.x, dim.y));
+    }
+
+    getLayerTextures(layer) {
+        if (layer === this.colorLayer) {
+            return [this.uniforms.texture.value];
+        }
+    }
+    setLayerTextures(layer, textures) {
+        if (Array.isArray(textures)) {
+            textures = textures[0];
+        }
+        if (layer === this.colorLayer) {
+            this.uniforms.texture.value = textures.texture;
+            this.uniforms.offsetScale.value.copy(textures.pitch);
+        }
+    }
+
+    // eslint-disable-next-line class-methods-use-this
+    setSequence() {
+        // no-op
+    }
+
+    // eslint-disable-next-line class-methods-use-this
+    setLayerVisibility() {
+        // no-op
+    }
+
+    // eslint-disable-next-line class-methods-use-this
+    setLayerOpacity() {
+        // no-op
     }
 }
 

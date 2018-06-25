@@ -6,6 +6,7 @@ import OBB from '../Renderer/ThreeExtended/OBB';
 import Extent from '../Core/Geographic/Extent';
 import { init3dTilesLayer } from '../Process/3dTilesProcessing';
 import utf8Decoder from '../utils/Utf8Decoder';
+import Points from '../Core/Points';
 
 function $3dTilesIndex(tileset, baseURL) {
     let counter = 0;
@@ -152,7 +153,7 @@ function pntsParse(data, layer) {
             new THREE.PointsMaterial({ size: 0.05, vertexColors: THREE.VertexColors });
 
         // creation points with geometry and material
-        const points = new THREE.Points(layer, result.point.geometry, material);
+        const points = new Points(layer, result.point.geometry, material);
 
         if (result.point.offset) {
             points.position.copy(result.point.offset);
