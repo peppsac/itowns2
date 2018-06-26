@@ -28,7 +28,7 @@ export default {
             if (node.layerUpdateState[c.id] && node.layerUpdateState[c.id].inError()) {
                 continue;
             }
-            if (c.tileInsideLimit(node, c) && !node.isColorLayerLoaded(c.id)) {
+            if (c.tileInsideLimit(node, c) && !node.isColorLayerLoaded(c)) {
                 return false;
             }
         }

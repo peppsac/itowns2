@@ -11,9 +11,11 @@ import RendererConstant from '../Renderer/RendererConstant';
 import OGCWebServiceHelper, { SIZE_TEXTURE_TILE } from '../Provider/OGCWebServiceHelper';
 import { is4326 } from './Geographic/Coordinates';
 
-function TileMesh(geometry, params) {
+function TileMesh(layer, geometry, params) {
     // Constructor
     THREE.Mesh.call(this);
+
+    this.layer = layer;
 
     this.matrixAutoUpdate = false;
     this.rotationAutoUpdate = false;
@@ -37,6 +39,7 @@ function TileMesh(geometry, params) {
     this.frustumCulled = false;
 
     this.updateGeometricError();
+    this.wmtsCoords = {};
 
     // Layer
     this.setDisplayed(false);
@@ -120,15 +123,12 @@ TileMesh.prototype.setSelected = function setSelected(select) {
     this.material.setSelected(select);
 };
 
-TileMesh.prototype.setTextureElevation = function setTextureElevation(elevation) {
+TileMesh.prototype.setTextureElevation = function setTextureElevation(layer, elevation) {
     if (this.material === null) {
         return;
     }
-
-    const offsetScale = elevation.pitch || new THREE.Vector4(0, 0, 1, 1);
     this.setBBoxZ(elevation.min, elevation.max);
-
-    this.material.setTexture(elevation.texture, l_ELEVATION, 0, offsetScale);
+    this.material.setLayerTextures(layer, elevation);
 };
 
 
@@ -158,14 +158,13 @@ TileMesh.prototype.setTexturesLayer = function setTexturesLayer(textures, layerT
     }
 };
 
-TileMesh.prototype.getLayerTextures = function getLayerTextures(layerType, layerId) {
+TileMesh.prototype.isColorLayerLoaded = function isColorLayerLoaded(layer) {
     const mat = this.material;
-    return mat.getLayerTextures(layerType, layerId);
-};
-
-TileMesh.prototype.isColorLayerLoaded = function isColorLayerLoaded(layerId) {
-    const mat = this.material;
-    return mat.getColorLayerLevelById(layerId) > -1;
+    const textures = mat.getLayerTextures(layer);
+    if (textures.length) {
+        return textures[0].coords.zoom > -1;
+    }
+    return false;
 };
 
 TileMesh.prototype.isElevationLayerLoaded = function isElevationLayerLoaded() {
@@ -179,10 +178,6 @@ TileMesh.prototype.isColorLayerDownscaled = function isColorLayerDownscaled(laye
 
 TileMesh.prototype.OBB = function OBB() {
     return this.obb;
-};
-
-TileMesh.prototype.getIndexLayerColor = function getIndexLayerColor(idLayer) {
-    return this.material.indexOfColorLayer(idLayer);
 };
 
 TileMesh.prototype.removeColorLayer = function removeColorLayer(idLayer) {
@@ -224,8 +219,10 @@ TileMesh.prototype.getCoordsForLayer = function getCoordsForLayer(layer) {
         } else {
             return OGCWebServiceHelper.computeTMSCoordinates(this, layer.extent, layer.origin);
         }
-    } else {
+    } else if (layer.extent.crs() == this.extent.crs()) {
         return [this.extent];
+    } else {
+        return [this.extent.as(layer.extent.crs())];
     }
 };
 
