@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import Extent from '../Core/Geographic/Extent';
 
 function requestNewTile(view, scheduler, geometryLayer, metadata, parent, redraw) {
     const command = {
@@ -26,6 +27,26 @@ function subdivideNode(context, layer, node, cullingTest) {
     }
 }
 
+function boundingVolumeToExtent(crs, layer, volume, transform) {
+    if (volume.region) {
+        return new Extent('EPSG:4326',
+            THREE.Math.radToDeg(volume.region[0]),
+            THREE.Math.radToDeg(volume.region[2]),
+            THREE.Math.radToDeg(volume.region[1]),
+            THREE.Math.radToDeg(volume.region[3]));
+    } else if (volume.box) {
+        const box = volume.box.clone().applyMatrix4(transform);
+        return new Extent(crs, {
+            west: box.min.x,
+            east: box.max.x,
+            south: box.min.y,
+            north: box.max.y,
+        });
+    } else {
+        // TODO
+    }
+}
+
 const tmpMatrix = new THREE.Matrix4();
 function _subdivideNodeAdditive(context, layer, node, cullingTest) {
     for (const child of layer.tileIndex.index[node.tileId].children) {
@@ -50,6 +71,12 @@ function _subdivideNodeAdditive(context, layer, node, cullingTest) {
         child.promise = requestNewTile(context.view, context.scheduler, layer, child, node, true).then((tile) => {
             node.add(tile);
             tile.updateMatrixWorld();
+
+            const extent = boundingVolumeToExtent(layer.extent.crs(), tile.layer, tile.boundingVolume, tile.matrixWorld);
+            tile.traverse((obj) => {
+                obj.extent = extent;
+            });
+
             context.view.notifyChange(child);
             child.loaded = true;
             delete child.promise;
@@ -199,7 +226,7 @@ export function pre3dTilesUpdate(context, layer) {
      // TODO: not correct -> see new preSSE
     // const HFOV = 2.0 * Math.atan(Math.tan(radAngle * 0.5) / context.camera.ratio);
     const HYFOV = 2.0 * Math.atan(Math.tan(radAngle * 0.5) * hypotenuse / context.camera.width);
-    context.camera.preSSE = hypotenuse * (2.0 * Math.tan(HYFOV * 0.5));
+    context.camera.preSSE = hypotenuse / (2.0 * Math.tan(HYFOV * 0.5));
 
     // once in a while, garbage collect
     if (Math.random() > 0.98) {
@@ -259,6 +286,8 @@ export function init3dTilesLayer(view, scheduler, layer) {
                 tile.updateMatrixWorld();
                 layer.tileIndex.index[tile.tileId].loaded = true;
                 layer.root = tile;
+                layer.extent = boundingVolumeToExtent(layer.projection || view.referenceCrs,
+                    tile, tile.boundingVolume, tile.matrixWorld);
             });
 }
 
