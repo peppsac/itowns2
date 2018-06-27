@@ -20,7 +20,7 @@ function initColorTexturesFromParent(node, parent, layer) {
     for (const _c of coords) {
         let c;
         // TODO: clarify this
-        if (layer.protocol == 'wms') {
+        if (false && layer.protocol == 'wms') {
             c = _c.as(layer.projection);
         } else {
             c = _c;

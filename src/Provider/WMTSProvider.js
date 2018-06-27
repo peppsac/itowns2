@@ -82,7 +82,11 @@ function selectAllExtentsToDownload(layer, extents, textures, previousError) {
         if (textures && textures[i].extent && textures[i].extent.zoom == extent.zoom) {
             return;
         }
-        result.push({ extent, pitch });
+        result.push({
+            extent,
+            pitch,
+            url: URLBuilder.xyz(extent, layer),
+        });
     }
     return result;
 }
@@ -161,9 +165,13 @@ function getXbilTexture(toDownload, layer) {
 /*
  * Return texture RGBA THREE.js of orthophoto
  */
-function getColorTexture(toDownload, layer) {
+function getColorTexture(toDownload, layer, command) {
     const urld = URLBuilder.xyz(toDownload.extent, layer);
     return OGCWebServiceHelper.getColorTextureByUrl(urld, layer.networkOptions).then((texture) => {
+        const diff = (Date.now() - Math.max(command.timestamp, texture.timestamp)) * 0.001;
+        if (diff > 0.02) {
+            console.log(`Delta ${diff} s (${command.urlInCache}`);
+        }
         const result = {};
         result.texture = texture;
         result.texture.extent = toDownload.extent;
@@ -181,7 +189,7 @@ function getColorTexture(toDownload, layer) {
 
 function executeCommand(command) {
     const layer = command.layer;
-    return supportedFormats.get(layer.format)(command.toDownload, layer);
+    return supportedFormats.get(layer.format)(command.toDownload, layer, command);
 }
 
 function tileTextureCount(tile, layer) {
@@ -224,10 +232,10 @@ function tileInsideLimit(tile, layer) {
     return true;
 }
 
-function getColorTextures(toDownload, layer) {
+function getColorTextures(toDownload, layer, command) {
     const promises = [];
     for (let i = 0; i < toDownload.length; i++) {
-        promises.push(getColorTexture(toDownload[i], layer));
+        promises.push(getColorTexture(toDownload[i], layer, command));
     }
     return Promise.all(promises);
 }

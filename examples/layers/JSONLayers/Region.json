@@ -22,7 +22,7 @@
     "heightMapWidth" : 256,
     "waterMask"      : false,
     "updateStrategy": {
-        "type": 0,
+        "type": 3,
         "options": {}
     },
     "format"  : "image/png",

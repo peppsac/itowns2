@@ -103,7 +103,11 @@ function selectAllExtentsToDownload(layer, extents, textures, previousError) {
             return;
         }
         const pitch = extents[i].offsetToParent(extent);
-        result.push({ extent, pitch });
+        result.push({
+            extent,
+            pitch,
+            url: URLBuilder.bbox(extent, layer),
+        });
     }
     return result;
 }
@@ -166,11 +170,15 @@ export function chooseExtentToDownload(layer, extent, currentExtent) {
     return ex;
 }
 
-function getColorTexture(layer, toDownload) {
+function getColorTexture(layer, toDownload, command) {
     const urld = URLBuilder.bbox(toDownload.extent, layer);
     const result = { pitch: toDownload.pitch };
 
     return OGCWebServiceHelper.getColorTextureByUrl(urld, layer.networkOptions).then((texture) => {
+        const diff = (Date.now() - Math.max(command.timestamp, texture.timestamp)) * 0.001;
+        if (diff > 0.02) {
+            console.log(`Delta ${diff} s (${command.urlInCache}`);
+        }
         result.texture = texture;
         result.texture.extent = toDownload.extent;
         if (layer.transparent) {
@@ -186,7 +194,7 @@ function getColorTexture(layer, toDownload) {
 function executeCommand(command) {
     const promises = [];
     for (let i = 0; i < command.toDownload.length; i++) {
-        promises.push(getColorTexture(command.layer, command.toDownload[i]));
+        promises.push(getColorTexture(command.layer, command.toDownload[i], command));
     }
     return Promise.all(promises);
 }

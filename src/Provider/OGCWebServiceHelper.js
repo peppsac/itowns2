@@ -19,6 +19,7 @@ export default {
     getColorTextureByUrl(url, networkOptions) {
         return Cache.get(url) || Cache.set(url, Fetcher.texture(url, networkOptions)
             .then((texture) => {
+                texture.timestamp = Date.now();
                 texture.generateMipmaps = false;
                 texture.magFilter = THREE.LinearFilter;
                 texture.minFilter = THREE.LinearFilter;
