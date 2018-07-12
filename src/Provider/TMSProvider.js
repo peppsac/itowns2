@@ -76,20 +76,17 @@ function selectAllExtentsToDownload(layer, extents, textures, previousError) {
 
 function executeCommand(command) {
     const layer = command.layer;
+    const tile = command.requester;
 
     const promises = [];
-    const supportedFormats = {
-        'application/x-protobuf;type=mapbox-vector': getVectorTile.bind(this),
-    };
-    const func = supportedFormats[layer.format];
 
     for (const toDownload of command.toDownload) {
-        if (func) {
-            // TODO
-            promises.push(func(tile, coordTMS, layer));
+        const urld = URLBuilder.xyz(toDownload.extent, layer);
+        if (layer.format === 'application/x-protobuf;type=mapbox-vector') {
+            if (layer.type == 'color') {
+                promises.push(VectorTileHelper.getVectorTileTextureByUrl(urld, tile, layer, coordTMS));
+            }
         } else {
-            const urld = URLBuilder.xyz(toDownload.extent, layer);
-
             promises.push(OGCWebServiceHelper.getColorTextureByUrl(urld, layer.networkOptions).then((texture) => {
                 const result = {};
                 result.texture = texture;
