@@ -144,30 +144,34 @@ export function chooseExtentToDownload(layer, extent, currentExtent) {
             break;
     }
 
-    if (nodeDepth <= nextDepth) {
+    if (nextDepth >= nodeDepth) {
         return extent;
     }
+    while (nextDepth > currentDepth) {
+        const p = Math.pow(2, nextDepth);
+        const ratio = 1 / p;
+        // Compute the x/y cell in which the center of the extent lives.
+        // The center is at: offset.x + (offset.x + offset.z) / 2.
+        // We do this because taking one edge can lead to invalid result (6.99999 => 6)
+        const x = ratio * Math.floor((2 * offsetScale.x + offsetScale.z) / (2 * ratio));
+        const y = ratio * Math.floor((2 * offsetScale.y + offsetScale.w) / (2 * ratio));
 
-    const p = Math.pow(2, nextDepth);
-    const ratio = 1 / p;
-    // Compute the x/y cell in which the center of the extent lives.
-    // The center is at: offset.x + (offset.x + offset.z) / 2.
-    // We do this because taking one edge can lead to invalid result (6.99999 => 6)
-    const x = ratio * Math.floor((2 * offsetScale.x + offsetScale.z) / (2 * ratio));
-    const y = ratio * Math.floor((2 * offsetScale.y + offsetScale.w) / (2 * ratio));
+        const ex = new Extent(currentExtent.crs(), {
+            west: layer.extent.west() + x * lay.x,
+            east: layer.extent.west() + (x + ratio) * lay.x,
+            north: layer.extent.north() - y * lay.y,
+            south: layer.extent.north() - (y + ratio) * lay.y,
+        });
 
-    const ex = new Extent(currentExtent.crs(), {
-        west: layer.extent.west() + x * lay.x,
-        east: layer.extent.west() + (x + ratio) * lay.x,
-        north: layer.extent.north() - y * lay.y,
-        south: layer.extent.north() - (y + ratio) * lay.y,
-    });
-    if (__DEBUG__) {
-        if (!extent.isInside(ex)) {
-            throw new Error('Invalid computed extent');
+        // extent might be at a boundary of the quadtree so the parent extent
+        // may not cover it entirely
+        if (extent.isInside(ex)) {
+            return ex;
+        } else {
+            nextDepth -= 1;
         }
     }
-    return ex;
+    return extent;
 }
 
 function getColorTexture(layer, toDownload) {
