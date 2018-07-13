@@ -82,9 +82,7 @@ export default {
                 texture.premultiplyAlpha = true;
             }
 
-            return {
-                texture,
-            };
+            return texture;
         }));
     },
 };
