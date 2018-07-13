@@ -32,6 +32,7 @@ and open the template in the editor.
         <script src="examples/js/GUI/GuiTools.js"></script>
         <script src="dist/itowns.js"></script>
         <script src="dist/debug.js"></script>
+        <script src="./examples/js/VectorTileStyleSupport.js"></script>
         <script type="text/javascript">
             /* global itowns,document,GuiTools, debug, window */
 
@@ -48,18 +49,45 @@ and open the template in the editor.
 
             var promises = [];
             promises.push(itowns.Fetcher.json('examples/layers/JSONLayers/Ortho.json').then(addLayerCb));
-            promises.push(itowns.Fetcher.json('examples/layers/JSONLayers/OrthosCRS.json').then(addLayerCb));
-            promises.push(itowns.Fetcher.json('examples/layers/JSONLayers/ScanEX.json').then(addLayerCb));
-            promises.push(itowns.Fetcher.json('examples/layers/JSONLayers/Region.json').then(addLayerCb));
+            itowns.Fetcher.json('https://raw.githubusercontent.com/Oslandia/postile-openmaptiles/master/style.json').then(function (style) {
+                var supportedLayers = [];
+                var backgroundLayer;
 
-            promises.push(itowns.Fetcher.json('examples/layers/JSONLayers/Cada.json').then(addLayerCb));
-            promises.push(itowns.Fetcher.json('examples/layers/JSONLayers/Administrative.json').then(addLayerCb));
-            promises.push(itowns.Fetcher.json('examples/layers/JSONLayers/Transport.json').then(addLayerCb));
-            promises.push(itowns.Fetcher.json('examples/layers/JSONLayers/Railways.json').then(addLayerCb));
-            promises.push(itowns.Fetcher.json('examples/layers/JSONLayers/Denomination.json').then(addLayerCb));
+                style.layers.forEach(function(layer) {
+                    if (layer.type === 'background') {
+                        backgroundLayer = layer;
+                    } else if (['fill', 'line'].indexOf(layer.type) >= 0) {
+                        supportedLayers.push(layer);
+                    }
+                });
 
-            promises.push(itowns.Fetcher.json('examples/layers/JSONLayers/WORLD_DTM.json').then(addLayerCb));
-            promises.push(itowns.Fetcher.json('examples/layers/JSONLayers/IGN_MNT_HIGHRES.json').then(addLayerCb));
+                promises.push(globeView.addLayer({
+                    type: 'color',
+                    protocol: 'xyz',
+                    id: 'MVT',
+                    projection: 'EPSG:3857',
+                    // eslint-disable-next-line no-template-curly-in-string
+                    url: 'https://osm.oslandia.io/data/v3/${z}/${x}/${y}.pbf',
+                    format: 'application/x-protobuf;type=mapbox-vector',
+                    options: {
+                        attribution: {
+                            name: 'OpenStreetMap',
+                            url: 'http://www.openstreetmap.org/',
+                        },
+                        zoom: {
+                            min: 2,
+                            max: 14,
+                        },
+                        opacity: 0.5,
+                    },
+                    updateStrategy: {
+                        type: itowns.STRATEGY_DICHOTOMY,
+                    },
+                    style: mapboxStyle,
+                    filter: mapboxFilter(supportedLayers),
+                    backgroundLayer,
+                }));
+            });
 
             menuGlobe.addGUI('RealisticLighting', false, globeView.setRealisticLightingOn.bind(globeView));
 
