@@ -28,14 +28,6 @@ function preprocessDataLayer(layer) {
     layer.fx = layer.fx || 0.0;
 }
 
-function getVectorTile(tile, coords, layer) {
-    const url = URLBuilder.xyz(coords, layer);
-
-    if (layer.type == 'color') {
-        return VectorTileHelper.getVectorTileTextureByUrl(url, tile, layer, coords);
-    }
-}
-
 function canTextureBeImproved(layer, extents, textures, previousError) {
     for (const extent of extents) {
         if (!extentInsideLimit(extent, layer)) {
@@ -66,7 +58,11 @@ function selectAllExtentsToDownload(layer, extents, textures, previousError) {
         if (textures && textures[i].extent && textures[i].extent.zoom == extent.zoom) {
             return;
         }
-        result.push({ extent, pitch });
+        result.push({
+            extent,
+            pitch,
+            url: URLBuilder.xyz(extent, layer),
+        });
     }
     return result;
 }
@@ -78,19 +74,14 @@ function executeCommand(command) {
     const promises = [];
 
     for (const toDownload of command.toDownload) {
-        const urld = URLBuilder.xyz(toDownload.extent, layer);
-
         const promise = layer.format === 'application/x-protobuf;type=mapbox-vector' ?
-            VectorTileHelper.getVectorTileTextureByUrl(urld, tile, layer, coordTMS) :
-            OGCWebServiceHelper.getColorTextureByUrl(urld, layer.networkOptions);
+            VectorTileHelper.getVectorTileTextureByUrl(toDownload.url, tile, layer, toDownload.extent) :
+            OGCWebServiceHelper.getColorTextureByUrl(toDownload.url, layer.networkOptions);
 
         promises.push(promise.then((texture) => {
             const result = {};
-            const pitch = coordTMSParent ?
-                coordTMS.offsetToParent(coordTMSParent) :
-                new THREE.Vector4(0, 0, 1, 1);
             result.texture = texture;
-            result.texture.coords = toDownload.extent;
+            result.texture.extent = toDownload.extent;
             result.pitch = toDownload.pitch;
             if (layer.transparent) {
                 texture.premultiplyAlpha = true;
