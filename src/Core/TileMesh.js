@@ -203,15 +203,6 @@ TileMesh.prototype.getCoordsForLayer = function getCoordsForLayer(layer) {
     }
 };
 
-TileMesh.prototype.getZoomForLayer = function getZoomForLayer(layer) {
-    if (layer.protocol.indexOf('wmts') == 0) {
-        OGCWebServiceHelper.computeTileMatrixSetCoordinates(this, layer.options.tileMatrixSet);
-        return this.wmtsCoords[layer.options.tileMatrixSet][0].zoom;
-    } else {
-        return this.level;
-    }
-};
-
 /**
  * Search for a common ancestor between this tile and another one. It goes
  * through parents on each side until one is found.
