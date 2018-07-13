@@ -87,7 +87,7 @@ function drawFeature(ctx, feature, origin, scale, extent, style = {}) {
 }
 
 export default {
-    createTextureFromFeature(collection, extent, sizeTexture, style) {
+    createTextureFromFeature(collection, extent, sizeTexture, style, backgroundColor) {
         // A texture is instancied drawn canvas
         // origin and dimension are used to transform the feature's coordinates to canvas's space
         const origin = new THREE.Vector2(extent.west(), extent.south());
@@ -97,6 +97,10 @@ export default {
         c.width = sizeTexture;
         c.height = sizeTexture;
         const ctx = c.getContext('2d');
+        if (backgroundColor) {
+            ctx.fillStyle = backgroundColor.getStyle();
+            ctx.fillRect(0, 0, sizeTexture, sizeTexture);
+        }
         ctx.globalCompositeOperation = style.globalCompositeOperation || 'source-over';
 
         const scale = new THREE.Vector2(ctx.canvas.width / dimension.x, ctx.canvas.width / dimension.y);

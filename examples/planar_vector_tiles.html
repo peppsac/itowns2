@@ -1,6 +1,6 @@
 <html>
     <head>
-        <title>Itowns - Planar + TMS + Vector Tile</title>
+        <title>Itowns - Planar + vector-tiles</title>
 
         <meta charset="UTF-8">
         <link rel="stylesheet" type="text/css" href="css/example.css">
@@ -50,12 +50,12 @@
             // Add a vector tile layer
             itowns.Fetcher.json('https://raw.githubusercontent.com/Oslandia/postile-openmaptiles/master/style.json').then(function (style) {
                 var supportedLayers = [];
-
-                view.tileLayer.noTextureColor =
-                new itowns.THREE.Color(style['layers'][0]['paint']['background-color']);
+                var backgroundLayer;
 
                 style.layers.forEach(function(layer) {
-                    if (layer.type === 'fill' || layer.type === 'line') {
+                    if (layer.type === 'background') {
+                        backgroundLayer = layer;
+                    } else if (['fill', 'line'].indexOf(layer.type) >= 0) {
                         supportedLayers.push(layer);
                     }
                 });
@@ -84,6 +84,7 @@
                     },
                     style: mapboxStyle,
                     filter: mapboxFilter(supportedLayers),
+                    backgroundLayer,
                 });
             });
 

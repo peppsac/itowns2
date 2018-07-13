@@ -53,11 +53,24 @@ export default {
 
         return Cache.get(url) || Cache.set(url, getVectorTileByUrl(url, tile, layer, coords).then((features) => {
             let texture;
+
+            const backgroundColor = (layer.backgroundLayer && layer.backgroundLayer.paint) ?
+                new THREE.Color(layer.backgroundLayer.paint['background-color']) :
+                undefined;
             if (features) {
                 texture = Feature2Texture.createTextureFromFeature(
                     features,
                     coords.crs() == 'TMS' ? tile.extent : coords.as(tile.extent.crs()),
-                    256, layer.style);
+                    256,
+                    layer.style,
+                    backgroundColor);
+            } else if (backgroundColor) {
+                const data = new Uint8Array(3);
+                data[0] = backgroundColor.r * 255;
+                data[1] = backgroundColor.g * 255;
+                data[2] = backgroundColor.b * 255;
+                texture = new THREE.DataTexture(data, 1, 1, THREE.RGBFormat);
+                texture.needsUpdate = true;
             } else {
                 texture = new THREE.Texture();
             }
